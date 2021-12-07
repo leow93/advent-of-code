@@ -41,13 +41,12 @@ function multiply(param) {
 
 function parseFileInstructions(filename) {
   var parseLine = function (line) {
-    var data = line.split(" ");
-    if (data.length !== 2) {
-      console.log(data);
+    var match = line.split(" ");
+    if (match.length !== 2) {
       return Js_exn.raiseError("Invalid line");
     }
-    var direction = data[0];
-    var amountStr = data[1];
+    var direction = match[0];
+    var amountStr = match[1];
     var amount = Belt_Int.fromString(amountStr);
     switch (direction) {
       case "down" :

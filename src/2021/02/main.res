@@ -26,10 +26,7 @@ let parseFileInstructions = filename => {
         | _ => Js.Exn.raiseError("Could not parse line")
         }
       }
-    | data => {
-        Js.Console.log(data)
-        Js.Exn.raiseError("Invalid line")
-      }
+    | _ => Js.Exn.raiseError("Invalid line")
     }
   }
 
