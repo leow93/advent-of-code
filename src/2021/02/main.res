@@ -10,12 +10,7 @@ let evolve = ((x, y), direction) =>
   | Down(v) => (x, y + v)
   }
 
-let multiply = position => {
-  switch position {
-  | (x, y) => x * y
-  | _ => 0
-  }
-}
+let multiply = ((x, y)) => x * y
 
 let parseFileInstructions = filename => {
   open NodeJs

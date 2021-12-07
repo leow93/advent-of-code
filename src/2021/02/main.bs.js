@@ -35,8 +35,8 @@ function evolve(param, direction) {
   }
 }
 
-function multiply(position) {
-  return Math.imul(position[0], position[1]);
+function multiply(param) {
+  return Math.imul(param[0], param[1]);
 }
 
 function parseFileInstructions(filename) {
