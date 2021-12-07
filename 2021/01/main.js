@@ -35,12 +35,7 @@ function windowSumIncrease(list) {
   for (let i = 0; i < list.length - 2; i++) {
     const window = [list[i], list[i + 1], list[i + 2]];
     const total = sum(...window);
-    if (i === 0) {
-      previousWindow = total;
-      continue;
-    }
-
-    if (total > previousWindow) {
+    if (previousWindow !== undefined && total > previousWindow) {
       count++;
     }
     previousWindow = total;
