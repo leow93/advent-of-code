@@ -1,0 +1,22 @@
+{
+  "name": "advent-of-code",
+  "version": "1.0.0",
+  "description": "Repository containing my advent of code attempts",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/leow93/advent-of-code.git"
+  },
+  "author": "leow93",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/leow93/advent-of-code/issues"
+  },
+  "homepage": "https://github.com/leow93/advent-of-code#readme",
+  "devDependencies": {
+    "prettier": "2.5.1"
+  }
+}
