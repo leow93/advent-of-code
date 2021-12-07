@@ -4,7 +4,9 @@
   "description": "Repository containing my advent of code attempts",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "re:build": "rescript",
+    "re:start": "rescript build -w"
   },
   "repository": {
     "type": "git",
@@ -17,6 +19,8 @@
   },
   "homepage": "https://github.com/leow93/advent-of-code#readme",
   "devDependencies": {
-    "prettier": "2.5.1"
+    "prettier": "2.5.1",
+    "rescript": "^9.1.4",
+    "rescript-nodejs": "^14.1.0"
   }
 }
