@@ -42,12 +42,6 @@ function partOne(lines) {
 }
 
 function partTwo(lines) {
-  // const transposed = transpose(lines);
-  // const result = transposed;
-  // for (let i = 0; i < transposed.length; i++) {
-  //   const
-  // }
-
   const calculate = (filter, arr, i) => {
     if (arr.length === 1) {
       return arr[0];
