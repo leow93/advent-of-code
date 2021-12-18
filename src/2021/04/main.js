@@ -108,6 +108,36 @@ function checkWinner(boards) {
   }
 }
 
+function findAllWinners(boards) {
+  const winners = [];
+  for (let i = 0; i < boards.length; i++) {
+    if (winners.includes(i)) {
+      continue;
+    }
+    const board = boards[i];
+    if (
+      board.some((row) => row.every((cell) => cell.drawn)) ||
+      transpose(board).some((row) => row.every((cell) => cell.drawn))
+    ) {
+      winners.push(i);
+    }
+  }
+  return winners;
+}
+
+function calculateScore(board, numberDrawn) {
+  return (
+    board.reduce(
+      (total, row) =>
+        row.reduce(
+          (sum, cell) => (cell.drawn ? sum : sum + cell.number),
+          total
+        ),
+      0
+    ) * numberDrawn
+  );
+}
+
 function partOne(filename) {
   const input = readInput(filename);
   const { drawnNumbers } = input;
@@ -116,24 +146,51 @@ function partOne(filename) {
     state = evolve(state, number);
     const winner = checkWinner(state);
     if (winner != null) {
-      console.log('Winner', winner, number);
-
-      const score =
-        state[winner].reduce((total, row) => {
-          return row.reduce(
-            (sum, cell) => (cell.drawn ? sum : sum + cell.number),
-            total
-          );
-        }, 0) * number;
+      const score = calculateScore(state[winner], number);
       console.log('SCORE', score);
       break;
     }
   }
 }
 
+function partTwo(filename) {
+  const input = readInput(filename);
+  const { drawnNumbers } = input;
+  let state = input.boards;
+  const orderedWinners = [];
+  for (const number of drawnNumbers) {
+    state = evolve(state, number);
+    for (const x of findAllWinners(state)) {
+      if (!orderedWinners.includes(x)) {
+        orderedWinners.push(x);
+      }
+    }
+
+    if (orderedWinners.length === state.length) {
+      console.log(
+        'Last winner is board number:',
+        orderedWinners[orderedWinners.length - 1] + 1
+      );
+      console.log('number called is', number);
+      console.log(
+        'score is',
+        calculateScore(state[orderedWinners[orderedWinners.length - 1]], number)
+      );
+      break;
+    }
+  }
+}
+
 function main() {
+  console.log('part I test: ');
   partOne('test.txt');
+  console.log('part I');
   partOne('data.txt');
+
+  console.log('part II test: ');
+  partTwo('test.txt');
+  console.log('part II');
+  partTwo('data.txt');
 }
 
 main();
