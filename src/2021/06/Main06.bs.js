@@ -47,7 +47,7 @@ var empty = Belt_MapInt.fromArray([
     ]);
 
 function simulateDay(map) {
-  return Belt_MapInt.set(Belt_MapInt.set(Belt_MapInt.set(Belt_MapInt.set(Belt_MapInt.set(Belt_MapInt.set(Belt_MapInt.set(Belt_MapInt.set(Belt_MapInt.set(map, 0, Belt_MapInt.getWithDefault(map, 1, 0)), 1, Belt_MapInt.getWithDefault(map, 2, 0)), 2, Belt_MapInt.getWithDefault(map, 3, 0)), 3, Belt_MapInt.getWithDefault(map, 4, 0)), 4, Belt_MapInt.getWithDefault(map, 5, 0)), 5, Belt_MapInt.getWithDefault(map, 6, 0)), 6, Belt_MapInt.getWithDefault(map, 7, 0) + Belt_MapInt.getWithDefault(map, 0, 0) | 0), 7, Belt_MapInt.getWithDefault(map, 8, 0)), 8, Belt_MapInt.getWithDefault(map, 0, 0));
+  return Belt_MapInt.set(Belt_MapInt.set(Belt_MapInt.set(Belt_MapInt.set(Belt_MapInt.set(Belt_MapInt.set(Belt_MapInt.set(Belt_MapInt.set(Belt_MapInt.set(map, 0, Belt_MapInt.getWithDefault(map, 1, 0)), 1, Belt_MapInt.getWithDefault(map, 2, 0)), 2, Belt_MapInt.getWithDefault(map, 3, 0)), 3, Belt_MapInt.getWithDefault(map, 4, 0)), 4, Belt_MapInt.getWithDefault(map, 5, 0)), 5, Belt_MapInt.getWithDefault(map, 6, 0)), 6, Belt_MapInt.getWithDefault(map, 7, 0) + Belt_MapInt.getWithDefault(map, 0, 0)), 7, Belt_MapInt.getWithDefault(map, 8, 0)), 8, Belt_MapInt.getWithDefault(map, 0, 0));
 }
 
 function simulateDays(_map, _count) {
@@ -65,7 +65,7 @@ function simulateDays(_map, _count) {
 
 function incrementKey(map, k) {
   if (k !== undefined) {
-    return Belt_MapInt.set(map, k, Belt_MapInt.getWithDefault(map, k, 0) + 1 | 0);
+    return Belt_MapInt.set(map, k, Belt_MapInt.getWithDefault(map, k, 0) + 1);
   } else {
     return map;
   }
@@ -77,14 +77,14 @@ function parseInput(s) {
 
 function partOne(input) {
   console.log("Part I:", Belt_MapInt.reduce(simulateDays(parseInput(input), 80), 0, (function (count, param, v) {
-              return count + v | 0;
+              return count + v;
             })));
   
 }
 
 function partTwo(input) {
   console.log("Part II:", Belt_MapInt.reduce(simulateDays(parseInput(input), 256), 0, (function (count, param, v) {
-              return count + v | 0;
+              return count + v;
             })));
   
 }
