@@ -90,7 +90,7 @@ function partTwo(input) {
 }
 
 function readLines(filename) {
-  return Fs.readFileSync(Path.resolve("06", filename)).toString();
+  return Fs.readFileSync(Path.resolve("src", "2021", "06", filename)).toString();
 }
 
 var testLines = readLines("test.txt");

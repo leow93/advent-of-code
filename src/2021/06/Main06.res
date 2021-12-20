@@ -58,7 +58,7 @@ let partTwo = input => {
 
 let readLines = filename => {
   open NodeJs
-  ["06", filename]->Path.resolve->Fs.readFileSync->Buffer.toString
+  ["src", "2021", "06", filename]->Path.resolve->Fs.readFileSync->Buffer.toString
 }
 
 let testLines = readLines("test.txt")
