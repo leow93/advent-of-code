@@ -22,21 +22,21 @@ module Command =
     | "" -> None
     | s ->
       match split " " s with
-       | [| _; count; _; fromColumn; _; toColumn |] -> Some(Move(int count, int fromColumn - 1, int toColumn - 1))
-        | _ -> None
-        
-let resultString (dict: Dictionary<_, char[]>) =
+      | [| _; count; _; fromColumn; _; toColumn |] -> Some(Move(int count, int fromColumn - 1, int toColumn - 1))
+      | _ -> None
+
+let resultString (dict: Dictionary<_, char []>) =
   let mutable result = ""
+
   for v in dict.Values do
     match v |> Array.tryItem 0 with
     | Some x -> result <- result + x.ToString()
     | None -> ()
+
   result
-  
-let partOne file =
-  match parseFile file with
-  | None -> failwith "Failed to parse file"
-  | Some (grid, commands) ->
+
+module State =
+  let parse grid =
     let state =
       grid
       |> split "\n"
@@ -46,35 +46,73 @@ let partOne file =
       |> Array.filter (fun c -> c.Length > 0)
       |> Array.map (fun c -> c[0 .. c.Length - 2])
 
-    let dict = Dictionary<int, char[]>()
-    
-    for i in 0..state.Length - 1 do
+    let dict = Dictionary<int, char []>()
+
+    for i in 0 .. state.Length - 1 do
       dict[i] <- state[i]
+
+    dict
+
+let partOne file =
+  match parseFile file with
+  | None -> failwith "Failed to parse file"
+  | Some (grid, commands) ->
+    let state = State.parse grid
 
     let commands =
       split "\n" commands |> Array.choose Command.parse
-      
+
     commands
     |> Array.iter (fun (Move (count, fromIdx, toIdx)) ->
       for _ in 1..count do
-        match dict[fromIdx] with
+        match state[fromIdx] with
         | [||] -> ()
         | boxes ->
           match boxes |> Array.tryItem 0 with
           | None -> ()
           | Some box ->
             let newToColumn =
-              dict[toIdx] |> Array.append [| box |]
-    
-            let newFromColumn = dict[fromIdx] |> Array.tail
-            dict[toIdx] <- newToColumn
-            dict[fromIdx] <- newFromColumn)
-    
-    resultString dict
-    
+              state[toIdx] |> Array.append [| box |]
+
+            let newFromColumn =
+              state[fromIdx] |> Array.tail
+
+            state[toIdx] <- newToColumn
+            state[fromIdx] <- newFromColumn)
+
+    resultString state
+
+let partTwo file =
+  match parseFile file with
+  | None -> failwith "Failed to parse file"
+  | Some (grid, commands) ->
+    let state = State.parse grid
+
+    let commands =
+      split "\n" commands |> Array.choose Command.parse
+
+    commands
+    |> Array.iter (fun (Move (count, fromIdx, toIdx)) ->
+      let boxes =
+        state[fromIdx] |> Array.take count
+
+      let newToColumn =
+        state[toIdx] |> Array.append boxes
+
+      let newFromColumn =
+        state[fromIdx] |> Array.removeManyAt 0 count
+
+      state[toIdx] <- newToColumn
+      state[fromIdx] <- newFromColumn)
+
+    resultString state
+
+
 
 printfn "Test"
-partOne "./test.txt" |> printf "Part I: %A\n"
+partOne "./test.txt" |> printf "Part I: %s\n"
+partTwo "./test.txt" |> printf "Part II: %s\n"
 
-printfn "Actual"
-partOne "./data.txt" |> printf "Part I: %A\n"
+printfn "\nActual"
+partOne "./data.txt" |> printf "Part I: %s\n"
+partTwo "./data.txt" |> printf "Part II: %s\n"
