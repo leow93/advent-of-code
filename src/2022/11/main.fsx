@@ -1,15 +1,14 @@
-open System.Collections.Generic
-
 let read = System.IO.File.ReadAllText
 let split (sep: string) (s: string) = s.Split(sep)
 
 type Monkey =
   { id: int
-    items: ResizeArray<int>
-    divisibleTest: int
+    items: uint64 list
+    divisibleTest: uint64
     trueCase: int
     falseCase: int
-    operation: int -> int }
+    operation: uint64 -> uint64
+    inspectionCount: uint64 }
 
 module Operation =
   let add a b = a + b
@@ -21,8 +20,8 @@ module Operation =
     | [| _; s |] ->
       match split " " s with
       | [| "old"; "*"; "old" |] -> square
-      | [| "old"; "*"; x |] -> multiply (int x)
-      | [| "old"; "+"; x |] -> add (int x)
+      | [| "old"; "*"; x |] -> multiply (uint64 x)
+      | [| "old"; "+"; x |] -> add (uint64 x)
       | _ -> failwithf "Could not parse operation: %s" s
     | _ -> failwithf "Could not parse operation: %s" s
 
@@ -37,18 +36,18 @@ module Monkey =
 
   let private parseStartingItems (s: string) =
     let s = s.Trim()
-    let result = ResizeArray()
 
     if s.StartsWith("Starting items: ") then
       s.Substring 16
       |> split ","
-      |> Array.iter (fun x -> result.Add(int x))
-
-    result
+      |> Array.map uint64
+      |> List.ofArray
+    else
+      []
 
   let private parseTest (s: string) =
     match split " " s |> Array.tryLast with
-    | Some x -> int x
+    | Some x -> uint64 x
     | None -> failwithf "Could not parse test %s" s
 
   let private parseTrueCase (s: string) =
@@ -69,66 +68,105 @@ module Monkey =
         divisibleTest = parseTest test
         operation = Operation.parse operation
         trueCase = parseTrueCase trueCase
-        falseCase = parseFalseCase falseCase }
+        falseCase = parseFalseCase falseCase
+        inspectionCount = 0UL }
     | _ -> failwithf "unknown monkey: %s" s
 
 let parse text =
   text |> split "\n\n" |> Array.map Monkey.parse
 
-let turn (monkeys: Monkey []) (monkey: Monkey) =
-  monkey.items.ForEach (fun item ->
-    let worryLevel =
-      floor (float (monkey.operation item) / float 3)
-      |> int
+type PlayRounds(n: int, worryManager: uint64 -> uint64, monkeys: Map<int, Monkey>) =
 
-    let throwToMonkey =
-      match worryLevel % monkey.divisibleTest = 0 with
-      | true -> monkey.trueCase
-      | false -> monkey.falseCase
+  let evolve monkeys monkey =
+    let inspectionCount =
+      monkey.items.Length |> uint64
 
-    monkeys[ throwToMonkey ].items.Add worryLevel)
+    let mutable monkeys = monkeys
 
-  let inspectionCount = monkey.items.Count
-  monkey.items.Clear()
-  monkey, inspectionCount
+    for item in monkey.items do
+      let worryLevel =
+        item |> monkey.operation |> worryManager
 
-let toArray (rArray: ResizeArray<'a>) =
-  let mutable result = Array.empty
+      let destinationMonkeyIdx =
+        match worryLevel % monkey.divisibleTest = 0UL with
+        | true -> monkey.trueCase
+        | false -> monkey.falseCase
 
-  for x in rArray do
-    result <- Array.append result [| x |]
+      let destinationMonkey =
+        monkeys
+        |> Map.find destinationMonkeyIdx
+        |> (fun x -> { x with items = [ worryLevel ] |> List.append x.items })
 
-  result
+      monkeys <-
+        monkeys
+        |> Map.add destinationMonkeyIdx destinationMonkey
 
-let round monkeys =
-  let takeTurn = turn monkeys
-  monkeys |> Array.map takeTurn
+    monkeys
+    |> Map.add
+         monkey.id
+         { monkey with
+             items = []
+             inspectionCount = monkey.inspectionCount + inspectionCount }
 
-let partOne file =
-  let mutable monkeys = read file |> parse
-  let counts = Dictionary()
+  let handleRound monkeys =
+    monkeys
+    |> Map.keys
+    |> Seq.sort
+    |> Seq.fold (fun monkeys idx -> evolve monkeys (monkeys |> Map.find idx)) monkeys
 
-  for _ in 1..20 do
-    let monkeysWithCounts = round monkeys
+  member _.Play() =
+    let mutable monkeys = monkeys
 
-    monkeysWithCounts |> Array.map (fun (m, count) -> m.id, count) |> Array.iter(fun (id, count) ->
-      match counts.TryGetValue id with
-      | true, v ->
-        counts[id] <- v + count
-      | false, _ ->
-        counts.Add(id, count)
-      )
-    monkeys <- monkeysWithCounts |> Array.map fst
-  
-  counts
-  |> Dictionary.ValueCollection
-  |> Seq.sortDescending
-  |> Seq.take 2
-  |> Seq.fold (fun a b -> a * b) 1
+    [ 1 .. n + 1 ]
+    |> Seq.fold
+         (fun rounds round ->
+           let lastRound =
+             rounds |> Map.find (round - 1)
 
-partOne "./test.txt"
-|> printfn "Part I (TEST): %i"
+           let currentRound = handleRound lastRound
+           Map.add round currentRound rounds)
+         (Map.ofList [ (0, monkeys) ])
+    |> Map.find n
+    |> Map.values
+    |> Seq.map (fun m -> m.inspectionCount)
+    |> Seq.sortDescending
+    |> Seq.take 2
+    |> Seq.reduce (*)
 
-partOne "./data.txt"
+let testMonkeys = read "./test.txt" |> parse
+let monkeys = read "./data.txt" |> parse
+
+let toMap monkeys =
+  monkeys
+  |> Array.fold (fun map monkey -> map |> Map.add monkey.id monkey) Map.empty
+
+let PartOneTest =
+  PlayRounds(20, (fun x -> x / 3UL), testMonkeys |> toMap)
+
+let PartOneActual =
+  PlayRounds(20, (fun x -> x / 3UL), monkeys |> toMap)
+
+PartOneTest.Play() |> printfn "Part I (TEST): %i"
+
+PartOneActual.Play()
 |> printfn "Part I (REAL): %i"
 
+let getCommonMultiple monkeys =
+  monkeys
+  |> Array.map (fun x -> x.divisibleTest)
+  |> Array.reduce (*)
+
+let getPartTwoWorryFn monkeys =
+  let value = getCommonMultiple monkeys
+  fun x -> x % value
+
+let PartTwoTest =
+  PlayRounds(10000, getPartTwoWorryFn testMonkeys, testMonkeys |> toMap)
+
+let PartTwoActual =
+  PlayRounds(10000, getPartTwoWorryFn monkeys, monkeys |> toMap)
+
+PartTwoTest.Play() |> printfn "Part II (TEST): %i"
+
+PartTwoActual.Play()
+|> printfn "Part II (REAL): %i"
