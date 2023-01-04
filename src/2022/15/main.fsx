@@ -7,15 +7,15 @@ type Sensor =
     beacon: int * int
     distance: int }
 
-let manhattanDistance (x1, y1) (x2, y2) = abs (x1 - x2) + abs (y1 - y2)
+let manhattanDistance (x1, y1) (x2, y2) = abs (x2 - x1) + abs (y2 - y1)
 
 let parseLine line =
   Regex.Matches(line, "(-?\d+)")
   |> Seq.map (fun x -> int x.Groups[0].Value)
   |> Array.ofSeq
-  |> (fun c ->
-    let sensor = (c[0], c[1])
-    let beacon = (c[2], c[3])
+  |> (fun x ->
+    let sensor = (x[0], x[1])
+    let beacon = (x[2], x[3])
 
     { sensor = sensor
       beacon = beacon
@@ -37,6 +37,15 @@ let coverageAtRow row sensor =
     )
 
   (sensor.sensor |> fst) - r, (sensor.sensor |> fst) + r
+
+let maxCoverageAtRow maxY row sensor =
+  let r =
+    abs (
+      sensor.distance
+      - abs (row - (sensor.sensor |> snd))
+    )
+
+  max 0 ((sensor.sensor |> fst) - r), min maxY ((sensor.sensor |> fst) + r)
 
 let sumRanges sum (a, b) = sum + abs (b + 1 - a)
 
@@ -74,6 +83,24 @@ let partOne (row: int) (data: Sensor array) =
 
   pointsInRange - beaconsCount
 
+let partTwo maxY (data: Sensor array) =
+  let coverageAtRow' = maxCoverageAtRow maxY
+
+  [ maxY .. -1 .. 0 ]
+  |> Seq.pick (fun row ->
+    data
+    |> Seq.filter (closerToRow row)
+    |> Seq.map (coverageAtRow' row)
+    |> merge
+    |> (fun s ->
+      match s |> Seq.length with
+      | n when n > 1 ->
+        s
+        |> Seq.head
+        |> fst
+        |> (fun xs -> Some((int64 xs - 1L) * 4000000L + int64 row))
+      | _ -> None))
+
 let testData = parseData "./test.txt"
 
 let actualData = parseData "./data.txt"
@@ -85,3 +112,11 @@ testData
 actualData
 |> partOne 2000000
 |> printfn "Part I (real): %i"
+
+testData
+|> partTwo 20
+|> printfn "Part II (test): %i"
+
+actualData
+|> partTwo 4000000
+|> printfn "Part II (test): %i"
