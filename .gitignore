@@ -7,3 +7,6 @@ node_modules
 .merlin
 
 src/2017
+
+src/misc/**/*.js
+
