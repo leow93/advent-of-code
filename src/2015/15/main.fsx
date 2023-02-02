@@ -35,21 +35,6 @@ let update k v map =
     | None -> Some v
     | Some x -> Some(v + x))
 
-let setAttributes ingredient count map =
-  seq {
-    "capacity"
-    "durability"
-    "flavour"
-    "texture"
-  }
-  |> Seq.fold
-       (fun acc attribute ->
-         acc
-         |> Map.change attribute (function
-           | None -> Some count
-           | Some x -> Some(x + count)))
-       map
-
 let getIngredientProp ingredient prop =
   match prop with
   | "capacity" -> ingredient.capacity
