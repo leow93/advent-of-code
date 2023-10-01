@@ -6,7 +6,5 @@ node_modules
 .bsb.lock
 .merlin
 
-src/2017
-
 src/misc/**/*.js
 
