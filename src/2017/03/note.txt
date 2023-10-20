@@ -1,0 +1,5 @@
+Solved without code.
+
+Part I: Bottom right are all odd squares. Find the first odd square lower than your value and count from there...
+
+Part II: https://oeis.org/A141481
