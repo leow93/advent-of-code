@@ -1,10 +1,9 @@
 open System
 
-let readLines = System.IO.File.ReadAllLines
+let readLines () =
+  stdin.ReadToEnd() |> (fun s -> s.Split "\n")
 
-let testData = readLines "./test.txt"
-let testData2 = readLines "./test2.txt"
-let data = readLines "./data.txt"
+let data = readLines()
 
 let toStringArray (line: string) = line.ToCharArray() |> Array.map string
 let toStringList = toStringArray >> List.ofArray
@@ -76,7 +75,5 @@ let partOne = solve PartOne.parse
 
 let partTwo = solve PartTwo.parse
 
-partOne testData |> printfn "Test: %A"
-partOne data |> printfn "Real: %A"
-partTwo testData2 |> printfn "Test II: %A"
-partTwo data |> printfn "Real II: %A"
+partOne data |> printfn "Part I: %A"
+partTwo data |> printfn "Part II: %A"

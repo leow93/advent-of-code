@@ -1,6 +1,9 @@
 open System.Text.RegularExpressions
 
-let readFile = System.IO.File.ReadAllLines
+let readLines () =
+  stdin.ReadToEnd() |> (fun s -> s.Split "\n")
+
+let data = readLines()
 
 type Round = { reds: int; blues: int; greens: int }
 type Game = { id: int; rounds: Round[] }
@@ -67,11 +70,10 @@ let parseInput = Array.choose parseLine
 let partOne games totalCubes =
   findPossibleGames games totalCubes |> Array.sumBy (fun x -> x.id)
 
-let testInput = readFile "./test.txt" |> parseInput
-let realInput = readFile "./data.txt" |> parseInput
+let input = parseInput data
+
 let totalCubes = Red 12, Blue 14, Green 13
-partOne testInput totalCubes |> printfn "part one (test): %i"
-partOne realInput totalCubes |> printfn "part one: %i"
+partOne input totalCubes |> printfn "Part I: %i"
 
 let partTwo games =
   games
@@ -81,5 +83,4 @@ let partTwo games =
     let maxGreens = game.rounds |> Array.maxBy (fun round -> round.greens)
     maxReds.reds * maxBlues.blues * maxGreens.greens)
 
-partTwo testInput |> printfn "part two (test): %i"
-partTwo realInput |> printfn "part two: %i"
+partTwo input |> printfn "Part II: %i"
