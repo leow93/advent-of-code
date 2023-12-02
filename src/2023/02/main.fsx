@@ -22,18 +22,15 @@ let parseCubeCount (s: string) =
   | _ -> failwith "invalid colour"
 
 let parseRound (roundStr: string) : Round =
-  match split "," (roundStr.Trim()) with
-  | [||] -> { reds = 0; blues = 0; greens = 0 }
-  | xs ->
-    xs
-    |> Array.fold
-      (fun state x ->
-        let cubeCount = parseCubeCount x
+  split "," (roundStr.Trim())
+  |> Array.fold
+    (fun state x ->
+      let cubeCount = parseCubeCount x
 
-        { reds = state.reds + cubeCount.reds
-          blues = state.blues + cubeCount.blues
-          greens = state.greens + cubeCount.greens })
-      { reds = 0; blues = 0; greens = 0 }
+      { reds = state.reds + cubeCount.reds
+        blues = state.blues + cubeCount.blues
+        greens = state.greens + cubeCount.greens })
+    { reds = 0; blues = 0; greens = 0 }
 
 let parseLine (line: string) =
   match split ":" line with
