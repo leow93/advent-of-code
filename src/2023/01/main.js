@@ -10,7 +10,7 @@ const partOne = data.reduce((acc, line) => {
 
 console.log('partOne', partOne);
 
-const transformations = {
+const wordsMap = {
   one: 1,
   two: 2,
   three: 3,
@@ -20,18 +20,6 @@ const transformations = {
   seven: 7,
   eight: 8,
   nine: 9,
-};
-
-const wordsMap = {
-  one: '1',
-  two: '2',
-  three: '3',
-  four: '4',
-  five: '5',
-  six: '6',
-  seven: '7',
-  eight: '8',
-  nine: '9',
 };
 
 /**
@@ -65,7 +53,7 @@ function parseLine(line) {
       if (line.slice(i, i + word.length) !== word) {
         continue;
       }
-      const number = transformations[word];
+      const number = wordsMap[word];
       if (number !== undefined) {
         if (first === null) {
           first = number;
