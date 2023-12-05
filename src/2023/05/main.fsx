@@ -1,20 +1,10 @@
 #load "../../utils/Utils.fsx"
 
 open System
+open System.Diagnostics
 open Utils
 
-type MapFn = int64 -> int64
-
 type Seeds = int64 seq
-
-type Almanac =
-  { seedToSoil: MapFn
-    soilToFertilizer: MapFn
-    fertilizerToWater: MapFn
-    waterToLight: MapFn
-    lightToTemperature: MapFn
-    temperatureToHumidity: MapFn
-    humidityToLocation: MapFn }
 
 type Spec =
   { destination: int64
@@ -47,10 +37,13 @@ let parseSeedsRanges (str: string) =
     match xs with
     | [| a; b |] -> Some(a, b)
     | _ -> None)
+
+type MapFn = int64 -> int64
+
 type Parser(text: string) =
   let maps = text.Split("\n\n") |> List.ofArray
 
-  let parseMapFn (str: string) =
+  let parseMapFn (str: string) : MapFn =
     str.Split("\n")
     |> Array.skip 1
     |> Array.choose (fun line ->
@@ -68,16 +61,24 @@ type Parser(text: string) =
   let parsedMaps =
     match maps with
     | [ seeds; b; c; d; e; f; g; h ] ->
-      let almanac =
-        { seedToSoil = parseMapFn b
-          soilToFertilizer = parseMapFn c
-          fertilizerToWater = parseMapFn d
-          waterToLight = parseMapFn e
-          lightToTemperature = parseMapFn f
-          temperatureToHumidity = parseMapFn g
-          humidityToLocation = parseMapFn h }
+      let seedToSoil = parseMapFn b
+      let soilToFertilizer = parseMapFn c
+      let fertilizerToWater = parseMapFn d
+      let waterToLight = parseMapFn e
+      let lightToTemperature = parseMapFn f
+      let temperatureToHumidity = parseMapFn g
+      let humidityToLocation = parseMapFn h
 
-      Some(almanac, parseSeeds seeds, parseSeedsRanges seeds)
+      let seedToLocation =
+        seedToSoil
+        >> soilToFertilizer
+        >> fertilizerToWater
+        >> waterToLight
+        >> lightToTemperature
+        >> temperatureToHumidity
+        >> humidityToLocation
+
+      Some(seedToLocation, parseSeeds seeds, parseSeedsRanges seeds)
     | _ -> None
 
   let fst (a, _, _) = a
@@ -88,39 +89,45 @@ type Parser(text: string) =
   member this.Seeds = parsedMaps |> Option.map snd |> Option.get
   member this.SeedRanges = parsedMaps |> Option.map trd |> Option.get
 
-let seedToLocation (alm: Almanac) =
-  alm.seedToSoil
-  >> alm.soilToFertilizer
-  >> alm.fertilizerToWater
-  >> alm.waterToLight
-  >> alm.lightToTemperature
-  >> alm.temperatureToHumidity
-  >> alm.humidityToLocation
-
 let parsed = Parser(Input.text)
-let almanac = parsed.Almanac
+let seedToLocation = parsed.Almanac
 let seeds = parsed.Seeds
 let seedRanges = parsed.SeedRanges
 
-let partOne () =
-  seeds |> Seq.map (seedToLocation almanac) |> Seq.min
-
-let partTwo () =
-  let mutable result = Int64.MaxValue
-  let total = seedRanges |> Seq.sumBy snd
-  let mutable i = 0L
-  for range in seedRanges do
-    let start, count = range
-    for seed in start .. start + count - 1L do
-      let loc = seedToLocation almanac seed
-      i <- i + 1L
-      if i % 1_000_000L = 0L then
-        printfn "done: %d%%" (100L * i / total)
-      if loc < result then
-        result <- loc
-
-
+let time description f =
+  let sw = Stopwatch.StartNew()
+  let result = f ()
+  sw.Stop()
+  printfn "%s: %dms" description sw.ElapsedMilliseconds
   result
 
-partOne () |> printfn "Part one: %d"
-partTwo () |> printfn "Part two: %d"
+let partOne () =
+  seeds |> Seq.map seedToLocation |> Seq.min
+
+let partTwo () =
+  let results =
+    seedRanges
+    |> Seq.map (fun range ->
+      async {
+        let start, count = range
+
+        let rec inner i curr =
+          if i = start + count then
+            curr
+          else
+            let loc = seedToLocation i
+
+            if loc < curr then
+              inner (i + 1L) loc
+            else
+              inner (i + 1L) curr
+
+        return inner start Int64.MaxValue
+      })
+    |> Async.Parallel
+    |> Async.RunSynchronously
+
+  results |> Seq.min
+
+time "Part one" partOne |> printfn "%d"
+time "Part two" partTwo |> printfn "%d"
