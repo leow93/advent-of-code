@@ -21,8 +21,7 @@ type Spec =
     range: int64 }
 
 let buildMapFn specs x =
-  let spec =
-    specs |> Array.tryFind (fun s -> x >= s.source && x < s.source + s.range)
+  let spec = specs |> Array.tryFind (fun s -> x >= s.source && x < s.source + s.range)
 
   match spec with
   | None -> x
@@ -31,15 +30,9 @@ let buildMapFn specs x =
     spec.destination + delta
 
 
-type Parser(text: string) =
+type Parser(text: string, parseSeeds: string -> int64 array) =
   let maps = text.Split("\n\n") |> List.ofArray
 
-  let parseSeeds (str: string) =
-    printfn "parseSeeds"
-
-    match str.Split(": ") with
-    | [| _; numbers |] -> numbers.Split(" ") |> Array.map int64
-    | _ -> [||]
 
   let parseMapFn (str: string) =
     str.Split("\n")
@@ -85,11 +78,14 @@ let seedToLocation (alm: Almanac) (seed: int64) =
   |> alm.temperatureToHumidity
   |> alm.humidityToLocation
 
-let almanac = Input.text |> Parser |> (fun x -> x.Almanac)
+let solve parseSeeds =
+  let almanac = Parser(Input.text, parseSeeds).Almanac
 
-printfn "parsed"
-
-let partOne almanac =
   almanac.seeds |> Array.map (seedToLocation almanac) |> Array.min
 
-almanac |> partOne |> printfn "Part One: %d"
+let parseSeeds (str: string) =
+  match str.Split(": ") with
+  | [| _; numbers |] -> numbers.Split(" ") |> Array.map int64
+  | _ -> [||]
+
+solve parseSeeds |> printfn "Part one: %d"
