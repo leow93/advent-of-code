@@ -1,13 +1,14 @@
 #load "../../utils/Utils.fsx"
 
-open System.Collections.Generic
+open System
 open Utils
 
 type MapFn = int64 -> int64
 
+type Seeds = int64 seq
+
 type Almanac =
-  { seeds: int64[]
-    seedToSoil: MapFn
+  { seedToSoil: MapFn
     soilToFertilizer: MapFn
     fertilizerToWater: MapFn
     waterToLight: MapFn
@@ -29,10 +30,25 @@ let buildMapFn specs x =
     let delta = x - spec.source
     spec.destination + delta
 
+let parseSeeds (str: string) =
+  match str.Split(": ") with
+  | [| _; numbers |] -> numbers.Split(" ") |> Array.map int64 |> Seq.ofArray
+  | _ -> Seq.empty
 
-type Parser(text: string, parseSeeds: string -> int64 array) =
+let parseSeedsRanges (str: string) =
+  let numbers =
+    match str.Split(": ") with
+    | [| _; numbers |] -> numbers.Split(" ") |> Array.map int64
+    | _ -> [||]
+
+  numbers
+  |> Array.chunkBySize 2
+  |> Array.choose (fun xs ->
+    match xs with
+    | [| a; b |] -> Some(a, b)
+    | _ -> None)
+type Parser(text: string) =
   let maps = text.Split("\n\n") |> List.ofArray
-
 
   let parseMapFn (str: string) =
     str.Split("\n")
@@ -49,13 +65,11 @@ type Parser(text: string, parseSeeds: string -> int64 array) =
       | _ -> None)
     |> buildMapFn
 
-
   let parsedMaps =
     match maps with
-    | [ a; b; c; d; e; f; g; h ] ->
+    | [ seeds; b; c; d; e; f; g; h ] ->
       let almanac =
-        { seeds = parseSeeds a
-          seedToSoil = parseMapFn b
+        { seedToSoil = parseMapFn b
           soilToFertilizer = parseMapFn c
           fertilizerToWater = parseMapFn d
           waterToLight = parseMapFn e
@@ -63,29 +77,50 @@ type Parser(text: string, parseSeeds: string -> int64 array) =
           temperatureToHumidity = parseMapFn g
           humidityToLocation = parseMapFn h }
 
-      Some almanac
+      Some(almanac, parseSeeds seeds, parseSeedsRanges seeds)
     | _ -> None
 
-  member this.Almanac = parsedMaps.Value
+  let fst (a, _, _) = a
+  let snd (_, b, _) = b
+  let trd (_, _, c) = c
 
-let seedToLocation (alm: Almanac) (seed: int64) =
-  seed
-  |> alm.seedToSoil
-  |> alm.soilToFertilizer
-  |> alm.fertilizerToWater
-  |> alm.waterToLight
-  |> alm.lightToTemperature
-  |> alm.temperatureToHumidity
-  |> alm.humidityToLocation
+  member this.Almanac = parsedMaps |> Option.map fst |> Option.get
+  member this.Seeds = parsedMaps |> Option.map snd |> Option.get
+  member this.SeedRanges = parsedMaps |> Option.map trd |> Option.get
 
-let solve parseSeeds =
-  let almanac = Parser(Input.text, parseSeeds).Almanac
+let seedToLocation (alm: Almanac) =
+  alm.seedToSoil
+  >> alm.soilToFertilizer
+  >> alm.fertilizerToWater
+  >> alm.waterToLight
+  >> alm.lightToTemperature
+  >> alm.temperatureToHumidity
+  >> alm.humidityToLocation
 
-  almanac.seeds |> Array.map (seedToLocation almanac) |> Array.min
+let parsed = Parser(Input.text)
+let almanac = parsed.Almanac
+let seeds = parsed.Seeds
+let seedRanges = parsed.SeedRanges
 
-let parseSeeds (str: string) =
-  match str.Split(": ") with
-  | [| _; numbers |] -> numbers.Split(" ") |> Array.map int64
-  | _ -> [||]
+let partOne () =
+  seeds |> Seq.map (seedToLocation almanac) |> Seq.min
 
-solve parseSeeds |> printfn "Part one: %d"
+let partTwo () =
+  let mutable result = Int64.MaxValue
+  let total = seedRanges |> Seq.sumBy snd
+  let mutable i = 0L
+  for range in seedRanges do
+    let start, count = range
+    for seed in start .. start + count - 1L do
+      let loc = seedToLocation almanac seed
+      i <- i + 1L
+      if i % 1_000_000L = 0L then
+        printfn "done: %d%%" (100L * i / total)
+      if loc < result then
+        result <- loc
+
+
+  result
+
+partOne () |> printfn "Part one: %d"
+partTwo () |> printfn "Part two: %d"
