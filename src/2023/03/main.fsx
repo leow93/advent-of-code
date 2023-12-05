@@ -1,13 +1,6 @@
+#load "../../utils/Utils.fsx"
+
 open System
-
-module Data =
-  let private readLines () =
-    stdin.ReadToEnd() |> (fun s -> s.Split "\n")
-
-  let data = readLines ()
-
-  let toStringArray (line: string) = line.ToCharArray() |> Array.map string
-
 
 module GridUtils =
   let gridMaxima input =
@@ -143,5 +136,6 @@ let partTwo lines =
   let gears = findPartsAroundGears lines
   gears |> List.sumBy (fun (a, b) -> a * b)
 
-Data.data |> partOne |> printfn "Part I: %i"
-Data.data |> partTwo |> printfn "Part II: %i"
+let lines = Utils.Input.readLines ()
+lines |> partOne |> printfn "Part I: %i"
+lines |> partTwo |> printfn "Part II: %i"

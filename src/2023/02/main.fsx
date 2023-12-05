@@ -1,9 +1,7 @@
+#load "../../utils/Utils.fsx"
+
 open System.Text.RegularExpressions
-
-let readLines () =
-  stdin.ReadToEnd() |> (fun s -> s.Split "\n")
-
-let data = readLines()
+let data = Utils.Input.readLines ()
 
 type Round = { reds: int; blues: int; greens: int }
 type Game = { id: int; rounds: Round[] }

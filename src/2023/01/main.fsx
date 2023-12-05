@@ -1,9 +1,7 @@
+#load "../../utils/Utils.fsx"
+
 open System
-
-let readLines () =
-  stdin.ReadToEnd() |> (fun s -> s.Split "\n")
-
-let data = readLines()
+let data = Utils.Input.readLines ()
 
 let toStringArray (line: string) = line.ToCharArray() |> Array.map string
 let toStringList = toStringArray >> List.ofArray

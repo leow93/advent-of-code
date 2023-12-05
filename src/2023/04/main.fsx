@@ -1,11 +1,8 @@
+#load "../../utils/Utils.fsx"
+
+open Utils
 open System
 open System.Collections.Generic
-
-module Input =
-  let private readLines () =
-    stdin.ReadToEnd() |> (fun s -> s.Split "\n")
-
-  let data = readLines ()
 
 type ScratchCard =
   { id: int
@@ -84,7 +81,7 @@ let partTwo cards =
 
   inner 0
 
-let scratchCards = Input.data |> Array.choose ScratchCard.fromLine
+let scratchCards = Input.readLines () |> Array.choose ScratchCard.fromLine
 
 scratchCards |> partOne |> printfn "Part One: %i"
 scratchCards |> partTwo |> printfn "Part Two: %i"

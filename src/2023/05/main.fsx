@@ -89,7 +89,7 @@ type Parser(text: string) =
   member this.Seeds = parsedMaps |> Option.map snd |> Option.get
   member this.SeedRanges = parsedMaps |> Option.map trd |> Option.get
 
-let parsed = Parser(Input.text)
+let parsed = Parser(Input.readText ())
 let seedToLocation = parsed.Almanac
 let seeds = parsed.Seeds
 let seedRanges = parsed.SeedRanges
