@@ -14,17 +14,14 @@ module Parse =
   let private trim (s: string) = s.Trim()
   let private split (sep: string) (s: string) = s.Split(sep)
 
+  let private concat (xs: string[]) = xs |> Array.fold (+) ""
+
   let parseAsSingleRace (lines: string) =
     match lines |> split "\n" with
     | [| time; distance |] ->
-      let timeString =
-        time.Substring(5) |> trim |> split " " |> Array.fold (fun acc s -> acc + s) ""
+      let timeString = time.Substring(5) |> trim |> split " " |> concat
 
-      let distanceString =
-        distance.Substring(9)
-        |> trim
-        |> split " "
-        |> Array.fold (fun acc s -> acc + s) ""
+      let distanceString = distance.Substring(9) |> trim |> split " " |> concat
 
       { time = int64 timeString
         distanceRecord = int64 distanceString }
