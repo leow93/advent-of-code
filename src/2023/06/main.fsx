@@ -47,7 +47,7 @@ module Parse =
 
 let input = Input.readText ()
 
-let countWaysToWin race =
+let countWaysToWinBruteForce race =
   let distanceRecord = race.distanceRecord
 
   let rec inner count time =
@@ -64,13 +64,38 @@ let countWaysToWin race =
 
   inner 0L 0L
 
+let solveQuadratic a b c =
+  let x1 = (-b + sqrt ((b * b) - 4.0 * a * c)) / (2.0 * a)
+  let x2 = (-b - sqrt ((b * b) - 4.0 * a * c)) / (2.0 * a)
+  x1, x2
+
+let countWaysToWin race =
+  let x1, x2 =
+    solveQuadratic 1 (-1.0 * (race.time |> float)) (race.distanceRecord |> float)
+
+  let floor (x: float) = Math.Floor(x) |> int64
+
+  floor x1 - floor x2
+
 let multiply xs = xs |> Array.fold (*) 1L
+
+let partOneBruteForce input =
+  input
+  |> Parse.parseAsMultipleRaces
+  |> Array.map countWaysToWinBruteForce
+  |> multiply
+
+let partTwoBruteForce input =
+  input |> Parse.parseAsSingleRace |> countWaysToWinBruteForce
 
 let partOne input =
   input |> Parse.parseAsMultipleRaces |> Array.map countWaysToWin |> multiply
 
 let partTwo input =
   input |> Parse.parseAsSingleRace |> countWaysToWin
+
+input |> partOneBruteForce |> printfn "Part 1 brute force: %d"
+input |> partTwoBruteForce |> printfn "Part 2 brute force: %d"
 
 input |> partOne |> printfn "Part 1: %d"
 input |> partTwo |> printfn "Part 2: %d"
