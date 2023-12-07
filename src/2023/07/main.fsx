@@ -4,6 +4,7 @@ open Utils
 
 type Bid = int
 type CardNumber = int
+
 type Card =
   | Ace
   | King
@@ -24,8 +25,8 @@ type HandRank =
   | HighCard of Hand
 
 module Ranking =
-  let cardScore (card: Card) : int =
-    match card with
+  let private cardScore =
+    function
     | Ace -> 14
     | King -> 13
     | Queen -> 12
@@ -33,7 +34,7 @@ module Ranking =
     | Number x -> x
     | Joker -> 1
 
-  let cmp (a: Hand) (b: Hand) =
+  let private cmp (a: Hand) (b: Hand) =
     let rec inner i =
       match a |> List.tryItem i, b |> List.tryItem i with
       | Some a, Some b ->
@@ -43,8 +44,11 @@ module Ranking =
 
     inner 0
 
-  let sort (a: HandRank) (b: HandRank) =
-    match a, b with
+  let sort a b =
+    let handA = a |> fst
+    let handB = b |> fst
+    
+    match handA, handB with
     | FiveOfAKind a, FiveOfAKind b -> cmp a b
     | FiveOfAKind _, _ -> 1
     | _, FiveOfAKind _ -> -1
@@ -133,25 +137,31 @@ module Parsing =
 
     optimiseJokers baseRank
 
+  let private parseCh jAsJoker =
+    function
+    | 'A' -> Ace
+    | 'K' -> King
+    | 'Q' -> Queen
+    | 'J' when jAsJoker -> Joker
+    | 'J' -> Jack
+    | 'T' -> Number 10
+    | x -> Number(int x - int '0')
+
   let parse jAsJoker (s: string) : HandRank * Bid =
     let parts = s.Split ' '
+    let parseCh' = parseCh jAsJoker
 
     match parts with
     | [| hand; bid |] ->
       let bid = int bid
       let chars = hand.ToCharArray() |> List.ofArray
 
-      let hand =
-        chars
-        |> List.map (fun ch ->
-          match ch with
-          | 'A' -> Ace
-          | 'K' -> King
-          | 'Q' -> Queen
-          | 'J' when jAsJoker -> Joker
-          | 'J' -> Jack
-          | 'T' -> Number 10
-          | x -> Number(int x - int '0'))
+      let rec inner acc chars =
+        match chars with
+        | x :: xs -> inner (acc @ [ parseCh' x ]) xs
+        | [] -> acc
+
+      let hand = inner [] chars
 
       rank hand, bid
     | _ -> failwithf "Invalid input: %s" s
@@ -160,9 +170,9 @@ let solve jAsJoker input =
   input
   |> Array.map (Parsing.parse jAsJoker)
   |> List.ofArray
-  |> List.sortWith (fun a b -> Ranking.sort (fst a) (fst b))
-  |> List.mapi (fun i (_hand, bid) -> (i + 1), bid)
-  |> List.sumBy (fun (i, bid) -> bid * i)
+  |> List.sortWith Ranking.sort 
+  |> List.indexed
+  |> List.fold (fun sum (i, hand) -> sum + (i + 1) * snd hand) 0
 
 let partOne input =
   input |> solve false |> printfn "Part one: %A"
@@ -171,6 +181,5 @@ let partTwo input =
   input |> solve true |> printfn "Part two: %A"
 
 let input = Input.readLines ()
-
-partOne input
+partOne input 
 partTwo input
