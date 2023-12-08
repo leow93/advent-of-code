@@ -25,15 +25,13 @@ module Parsing =
 
   let parse (lines: string array) =
     let instructions = lines |> Array.take 1 |> Array.head |> parseInstructions
-
-    instructions, lines |> Array.skip 2 |> Array.fold buildMap Map.empty
-
-let input = Input.readLines ()
+    let map = lines |> Array.skip 2 |> Array.fold buildMap Map.empty
+    instructions, map
 
 let getInstruction (instructions: Instruction array) index =
   instructions |> Array.tryItem (index % instructions.Length)
 
-let walkNode (instructions, map) finished (start: string) = 
+let walkNode (instructions, map) finished (start: string) =
   let rec inner i curr =
     if finished curr then
       i
@@ -52,20 +50,6 @@ let partOne input =
   let finished (x: string) = x = "ZZZ"
   let data = input |> Parsing.parse
   walkNode data finished "AAA"
-let nodesEndingWith (x: char) (map: Map<string, _>) =
-  map |> Map.filter (fun node _ -> node.EndsWith x) |> Map.keys |> List.ofSeq
-
-let divisors (x: int) =
-  let rec inner i acc =
-    if i > x / 2 then
-      acc
-    else
-      match x % i with
-      | 0 -> inner (i + 1) (acc |> Set.add i)
-      | _ -> inner (i + 1) acc
-
-  inner 1 Set.empty
-
 
 module Maths =
   let rec private greatestCommonDivisor x y =
@@ -83,14 +67,18 @@ module Maths =
     | [] -> failwith "Impossible"
 
 let partTwo input =
+  let nodesEndingWith (x: char) (map: Map<string, _>) =
+    map |> Map.filter (fun node _ -> node.EndsWith x) |> Map.keys |> List.ofSeq
+
   let data = input |> Parsing.parse
   let nodesEndingWithA = nodesEndingWith 'A' (snd data)
   let finished (x: string) = x.EndsWith('Z')
-  
+
   nodesEndingWithA
-  |> List.map (walkNode data finished) 
+  |> List.map (walkNode data finished)
   |> List.map int64
   |> Maths.lcm
 
+let input = Input.readLines ()
 partOne input |> printfn "Part 1: %d"
 partTwo input |> printfn "Part 2: %A"
