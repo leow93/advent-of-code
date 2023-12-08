@@ -24,7 +24,13 @@ module Parsing =
     | _ -> map
 
   let parse (lines: string array) =
-    let instructions = lines |> Array.take 1 |> Array.head |> parseInstructions
+    let instructions =
+      lines
+      |> Array.take 1
+      |> Array.tryHead
+      |> Option.map parseInstructions 
+      |> Option.defaultValue [||]
+
     let map = lines |> Array.skip 2 |> Array.fold buildMap Map.empty
     instructions, map
 
@@ -50,21 +56,6 @@ let partOne input =
   let finished (x: string) = x = "ZZZ"
   let data = input |> Parsing.parse
   walkNode data finished "AAA"
-
-module Maths =
-  let rec private greatestCommonDivisor x y =
-    match x with
-    | 0L -> y
-    | _ when y = 0L -> x
-    | _ -> greatestCommonDivisor y (x % y)
-
-  let private lowestCommonMultiple x y = x * y / (greatestCommonDivisor x y)
-
-  let rec lcm xs =
-    match xs with
-    | [ x; y ] -> lowestCommonMultiple x y
-    | x :: xs -> lcm [ x; (lcm xs) ]
-    | [] -> failwith "Impossible"
 
 let partTwo input =
   let nodesEndingWith (x: char) (map: Map<string, _>) =
