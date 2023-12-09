@@ -10,18 +10,14 @@ module Parsing =
       | [||] -> None
       | xs -> xs |> Array.map int |> Seq.ofArray |> Some)
 
-let diffs sequence =
-  sequence |> Seq.pairwise |> Seq.map (fun (a, b) -> b - a)
+let diffs = Seq.pairwise >> Seq.map (fun (a, b) -> b - a)
 
 let auxiliarySeqs (sequence: int seq) =
   let rec inner (acc: int seq list) =
     match acc |> List.tryHead with
     | None -> acc
-    | Some x ->
-      if x |> Seq.forall ((=) 0) then
-        acc
-      else
-        inner (diffs x :: acc)
+    | Some x when x |> Seq.forall ((=) 0) -> acc
+    | Some x -> inner (diffs x :: acc)
 
   inner [ sequence ]
 
