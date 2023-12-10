@@ -20,47 +20,49 @@ type MarkedCell =
   | LoopPipe of Cell
   | Other of Cell
 
-let item (x, y) grid =
+let item grid (x, y) =
   grid |> Array.tryItem x |> Option.bind (fun row -> row |> Array.tryItem y)
+
+let innerMap f grid = grid |> Array.map (Array.map f)
 
 module Parsing =
   let private findStartCoord grid =
-    let rec inner i =
+    let rec loop i =
       match grid |> Array.tryItem i with
       | None -> None
       | Some row ->
         match row |> Array.tryFindIndex Option.isNone with
         | Some j -> Some(i, j)
-        | None -> inner (i + 1)
+        | None -> loop (i + 1)
 
-    inner 0
+    loop 0
 
   let private inferStart start grid =
     let x, y = start
 
     let above =
-      match item (x - 1, y) grid with
+      match item grid (x - 1, y) with
       | Some(Some(NS x)) -> Some(NS x)
       | Some(Some(SW x)) -> Some(SW x)
       | Some(Some(SE x)) -> Some(SW x)
       | _ -> None
 
     let below =
-      match item (x + 1, y) grid with
+      match item grid (x + 1, y) with
       | Some(Some(NS x)) -> Some(NS x)
       | Some(Some(NW x)) -> Some(NW x)
       | Some(Some(NE x)) -> Some(NE x)
       | _ -> None
 
     let left =
-      match item (x, y - 1) grid with
+      match item grid (x, y - 1) with
       | Some(Some(EW x)) -> Some(EW x)
       | Some(Some(NE x)) -> Some(NE x)
       | Some(Some(SE x)) -> Some(SE x)
       | _ -> None
 
     let right =
-      match item (x, y + 1) grid with
+      match item grid (x, y + 1) with
       | Some(Some(EW x)) -> Some(EW x)
       | Some(Some(NW x)) -> Some(NW x)
       | Some(Some(SW x)) -> Some(SW x)
@@ -80,8 +82,7 @@ module Parsing =
       lines
       |> Array.mapi (fun i line ->
         line.ToCharArray()
-        |> Array.indexed
-        |> Array.map (fun (j, c) ->
+        |> Array.mapi (fun j c ->
           let coord = i, j
 
           match c with
@@ -104,17 +105,14 @@ module Parsing =
 
       let finalGrid =
         grid
-        |> Array.map (fun row ->
-          row
-          |> Array.map (function
-            | Some x -> x
-            // startCell is the only None
-            | None -> startCell))
+        |> innerMap (function
+          | Some x -> x
+          // startCell is the only None
+          | None -> startCell)
 
       finalGrid, startCell
 
-let nextCells coords grid =
-  coords |> List.choose (fun coord -> item coord grid)
+let nextCells coords grid = coords |> List.choose (item grid)
 
 let getNeighbours grid curr =
   match curr with
@@ -144,30 +142,28 @@ let walkTheLoop (grid, start) =
 
   let markedGrid =
     grid
-    |> Array.map (fun row ->
-      row
-      |> Array.map (fun cell ->
-        if visited |> Set.contains cell then
-          LoopPipe cell
-        else
-          Other cell))
+    |> innerMap (fun cell ->
+      if visited |> Set.contains cell then
+        LoopPipe cell
+      else
+        Other cell)
 
   System.Math.Ceiling(decimal count / 2M) |> int, markedGrid
 
 let countLine line =
-  let rec inner i crossingCount count =
+  let rec loop i crossingCount count =
     match line |> Array.tryItem i with
     | None -> count
     | Some(LoopPipe x) ->
       match x with
       | NS _
       | NW _
-      | NE _ -> inner (i + 1) (crossingCount + 1) count
-      | _ -> inner (i + 1) crossingCount count
-    | Some(Other _) when crossingCount % 2 <> 0 -> inner (i + 1) crossingCount (count + 1)
-    | Some(Other _) -> inner (i + 1) crossingCount count
+      | NE _ -> loop (i + 1) (crossingCount + 1) count
+      | _ -> loop (i + 1) crossingCount count
+    | Some(Other _) when crossingCount % 2 <> 0 -> loop (i + 1) crossingCount (count + 1)
+    | Some(Other _) -> loop (i + 1) crossingCount count
 
-  inner 0 0 0
+  loop 0 0 0
 
 let data = input |> Parsing.parse
 let count, markedGrid = walkTheLoop data
