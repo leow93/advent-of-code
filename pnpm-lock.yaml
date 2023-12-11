@@ -1,28 +1,33 @@
-lockfileVersion: 5.4
+lockfileVersion: '6.0'
 
-specifiers:
-  prettier: 2.5.1
-  rescript: ^9.1.4
-  rescript-nodejs: ^14.1.0
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
 
 devDependencies:
-  prettier: 2.5.1
-  rescript: 9.1.4
-  rescript-nodejs: 14.1.0
+  prettier:
+    specifier: 2.5.1
+    version: 2.5.1
+  rescript:
+    specifier: ^9.1.4
+    version: 9.1.4
+  rescript-nodejs:
+    specifier: ^14.1.0
+    version: 14.1.0
 
 packages:
 
-  /prettier/2.5.1:
+  /prettier@2.5.1:
     resolution: {integrity: sha512-vBZcPRUR5MZJwoyi3ZoyQlc1rXeEck8KgeC9AwwOn+exuxLxq5toTRDTSaVrXHxelDMHy9zlicw8u66yxoSUFg==}
     engines: {node: '>=10.13.0'}
     hasBin: true
     dev: true
 
-  /rescript-nodejs/14.1.0:
+  /rescript-nodejs@14.1.0:
     resolution: {integrity: sha512-Xyk86yq/frwHdg4vmimiFQdbJ94dDFZihOpNZc1/oJmZnBP6rdUDuU/bhGh5ouSQHQVHAOReLZQ59/ePt2HIJg==}
     dev: true
 
-  /rescript/9.1.4:
+  /rescript@9.1.4:
     resolution: {integrity: sha512-aXANK4IqecJzdnDpJUsU6pxMViCR5ogAxzuqS0mOr8TloMnzAjJFu63fjD6LCkWrKAhlMkFFzQvVQYaAaVkFXw==}
     hasBin: true
     requiresBuild: true
