@@ -125,9 +125,10 @@ let partTwo input =
 
     let alternativeMirror =
       alternatives
-      |> Array.map Mirrors.findMirrors
-      |> Array.map (List.filter (fun x -> x <> original))
-      |> Array.tryFind (fun xs -> xs.Length > 0)
+      |> Array.map (Mirrors.findMirrors >> (List.filter ((<>) original)))
+      |> Array.tryFind (function
+        | [] -> false
+        | _ -> true)
       |> Option.map List.head
 
     match alternativeMirror, original with

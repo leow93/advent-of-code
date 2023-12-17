@@ -1,6 +1,5 @@
 #load "../../utils/Utils.fsx"
 
-open System.Web
 open Utils
 
 let input = Input.readLines ()
@@ -30,36 +29,93 @@ module Tilting =
     | E
     | W
 
-  let private nextIndex (rocks: Cell[][]) i j =
-    match rocks[i][j] with
-    | RoundRock ->
-      let mutable result = i
-
-      while result > 0 && rocks[result - 1][j] = Empty do
-        result <- result - 1
-
-      Some result
-    | _ -> None
-
   let private slideRocksNorth rocks =
-    let mutable result = rocks
-
     for i in 0 .. Array.length rocks - 1 do
-      let row = result[i]
+      let row = rocks[i]
 
       for j in 0 .. Array.length row - 1 do
-        match nextIndex result i j with
-        | None -> ()
-        | Some x ->
-          result[i][j] <- Empty
-          result[x][j] <- RoundRock
+        match rocks[i][j] with
+        | RoundRock ->
+          let mutable result = i
 
-    result
+          while result > 0 && rocks[result - 1][j] = Empty do
+            result <- result - 1
+
+          rocks[i][j] <- Empty
+          rocks[result][j] <- RoundRock
+        | _ -> ()
+
+    rocks
+
+  let private slideRocksSouth rocks =
+    for i = ((Array.length rocks) - 1) downto 0 do
+      for j = 0 to ((Array.length rocks[0]) - 1) do
+        match rocks[i][j] with
+        | RoundRock ->
+          let mutable result = i
+
+          while result < rocks.Length - 1 && rocks[result + 1][j] = Empty do
+            result <- result + 1
+
+          rocks[i][j] <- Empty
+          rocks[result][j] <- RoundRock
+        | _ -> ()
+
+    rocks
+
+  let private slideRocksEast rocks =
+    for i = 0 to Array.length rocks - 1 do
+      for j = (Array.length rocks[0] - 1) downto 0 do
+        match rocks[i][j] with
+        | RoundRock ->
+          let mutable result = j
+
+          while result < rocks[0].Length - 1 && rocks[i][result + 1] = Empty do
+            result <- result + 1
+
+          rocks[i][j] <- Empty
+          rocks[i][result] <- RoundRock
+        | _ -> ()
+
+    rocks
+
+  let private slideRocksWest rocks =
+    for i = 0 to Array.length rocks - 1 do
+      for j = 0 to Array.length rocks[0] - 1 do
+        match rocks[i][j] with
+        | RoundRock ->
+          let mutable result = j
+
+          while result > 0 && rocks[i][result - 1] = Empty do
+            result <- result - 1
+
+          rocks[i][j] <- Empty
+          rocks[i][result] <- RoundRock
+        | _ -> ()
+
+    rocks
 
   let tilt direction rocks =
     match direction with
     | N -> rocks |> slideRocksNorth
-    | _ -> rocks
+    | S -> rocks |> slideRocksSouth
+    | E -> rocks |> slideRocksEast
+    | W -> rocks |> slideRocksWest
+
+  let toString grid =
+    let foldRow row =
+      (row
+       |> Array.fold
+         (fun r row ->
+           match row with
+           | Empty -> r + "."
+           | RoundRock -> r + "O"
+           | SquareRock -> r + "#")
+         "")
+
+    grid |> Array.fold (fun acc row -> acc + foldRow row + "\n") ""
+
+  let cycle = tilt N >> tilt W >> tilt S >> tilt E
 
 let platformLoad grid =
   let length = Array.length grid
@@ -78,8 +134,34 @@ let platformLoad grid =
     n * roundCount)
 
 
-let partOne input =
-  input |> Parsing.parseInput |> (Tilting.tilt Tilting.N) |> platformLoad
+open Tilting
 
+let partOne input =
+  input |> Parsing.parseInput |> (tilt N) |> platformLoad
+
+let partTwo input =
+  let limit = 1_000_000_000
+
+  let rec helper idx history grid =
+
+    if idx >= limit then
+      grid
+    else
+      let grid' = grid |> cycle
+
+      let content = toString grid'
+
+      match history |> List.tryFindIndex ((=) content) with
+      | None -> helper (idx + 1) (content :: history) grid'
+      | Some index ->
+        let cycle = index + 1
+        let q, _ = System.Math.DivRem(limit - idx, cycle)
+        let x = idx + q * cycle + 1
+        helper x (content :: history) grid'
+
+  let grid = input |> Parsing.parseInput
+
+  helper 0 [ grid |> toString ] grid |> platformLoad
 
 input |> partOne |> printfn "Part one: %d"
+input |> partTwo |> printfn "Part two: %d"
