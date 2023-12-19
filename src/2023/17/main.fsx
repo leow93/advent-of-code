@@ -25,7 +25,7 @@ let opposite =
   | Left -> Right
   | Right -> Left
 
-let forward dir rows cols (row, col) =
+let moveForward dir rows cols (row, col) =
   match dir with
   | Up when row > 0 -> Some(row - 1, col)
   | Down when row < (rows - 1) -> Some(row + 1, col)
@@ -42,7 +42,7 @@ type Crucible =
 
 let item (x, y) = grid[x][y]
 
-let children crucible grid =
+let getNextNodesPartOne crucible grid =
   let rows = Array.length grid
   let cols = Array.length grid[0]
   let directions = [ Up; Down; Left; Right ]
@@ -53,7 +53,7 @@ let children crucible grid =
     | Some dir when dir = crucible.dir && crucible.movesInDir = 3 -> inner (i + 1) acc
     | Some dir when dir = opposite crucible.dir -> inner (i + 1) acc
     | Some dir ->
-      match forward dir rows cols crucible.pos with
+      match moveForward dir rows cols crucible.pos with
       | None -> inner (i + 1) acc
       | Some pos ->
         let cost = crucible.cost + item pos
@@ -71,7 +71,40 @@ let children crucible grid =
 
   inner 0 []
 
-let partOne () =
+let getNextNodesPartTwo crucible grid =
+  let rows = Array.length grid
+  let cols = Array.length grid[0]
+  let directions = [ Up; Down; Left; Right ]
+
+  let rec inner i acc =
+    match directions |> List.tryItem i with
+    | None -> acc
+    // if we've moved 10 times in the same direction, we can't move that direction anymore
+    | Some dir when dir = crucible.dir && crucible.movesInDir = 10 -> inner (i + 1) acc
+    // must move at least 4 times in same direction
+    | Some dir when dir <> crucible.dir && crucible.movesInDir < 4 -> inner (i + 1) acc
+    // can't go backwards
+    | Some dir when dir = opposite crucible.dir -> inner (i + 1) acc
+    | Some dir ->
+      match moveForward dir rows cols crucible.pos with
+      | None -> inner (i + 1) acc
+      | Some pos ->
+        let cost = crucible.cost + item pos
+        let movesInDir = if crucible.dir = dir then crucible.movesInDir + 1 else 1
+
+        let newAcc =
+          List.append
+            acc
+            [ { cost = cost
+                pos = pos
+                dir = dir
+                movesInDir = movesInDir } ]
+
+        inner (i + 1) newAcc
+
+  inner 0 []
+
+let solve getNextNodes =
   let q = PriorityQueue()
   let seen = HashSet()
 
@@ -103,10 +136,14 @@ let partOne () =
     if crucible.pos = goal && crucible.cost < result then
       result <- crucible.cost
     else
-      for child in children crucible grid do
-        if seen.Add(child.pos, child.dir, child.movesInDir) then
-          enqueue child
+      for node in getNextNodes crucible grid do
+        if seen.Add(node.pos, node.dir, node.movesInDir) then
+          enqueue node
 
   result
 
-partOne () |> printfn "Part 1: %d"
+let partOne = solve getNextNodesPartOne
+let partTwo = solve getNextNodesPartTwo
+
+partOne |> printfn "Part 1: %d"
+partTwo |> printfn "Part 2: %d"
