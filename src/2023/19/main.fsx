@@ -1,6 +1,8 @@
 #load "../../utils/Utils.fsx"
 
+open System.Collections.Generic
 open Utils
+
 let input = Input.readText ()
 
 type Key =
@@ -9,7 +11,7 @@ type Key =
   | A
   | S
 
-type Part = Map<Key, int>
+type Part = Map<Key, int64>
 
 type Operator =
   | Gt
@@ -18,7 +20,7 @@ type Operator =
 type Comparison =
   { key: Key
     operator: Operator
-    value: int
+    value: int64
     destination: Destination }
 
 and Destination =
@@ -39,7 +41,7 @@ module PartsParser =
 
     match line |> Strings.split "," with
     | [| x; m; a; s |] ->
-      let parseInt (x: string) = x.Substring(2) |> int
+      let parseInt (x: string) = x.Substring(2) |> int64
 
       [ (X, parseInt x); (M, parseInt m); (A, parseInt a); (S, parseInt s) ]
       |> Map.ofList
@@ -151,13 +153,13 @@ let getPartDestination (workflows: Map<string, Rule[]>) (part: Part) : TerminalS
             destination <- Some rule.destination
 
       i <- i + 1
-      
+
     match destination with
     | None -> failwith "No destination found"
     | Some(Terminal Accepted) -> Accepted
     | Some(Terminal Rejected) -> Rejected
     | Some(Workflow x) -> inner x
-    
+
   inner "in"
 
 let loopWorkflows (workflows: Map<string, Rule[]>) parts =
@@ -176,4 +178,65 @@ let partOne input =
   let acceptedParts = loopWorkflows workflows data
   acceptedParts |> List.sumBy (fun x -> x[X] + x[M] + x[A] + x[S])
 
-partOne input |> printfn "%A"
+type Range = int64 * int64
+
+type RangeState = { ranges: Dictionary<Key, Range> }
+
+let getMin (key: Key) (state: RangeState) = state.ranges[key] |> fst
+let getMax (key: Key) (state: RangeState) = state.ranges[key] |> snd
+
+let partTwo input =
+  let workflows, _ = input |> Parser.parse
+
+  let getName =
+    function
+    | Workflow x -> x
+    | Terminal Accepted -> "A"
+    | Terminal Rejected -> "R"
+
+  let rec countRanges (ranges: Dictionary<Key, Range>) id (workflows: Map<string, Rule[]>) =
+
+    if id = "R" then
+      0L
+    elif id = "A" then
+      ranges.Values |> Seq.fold (fun acc (lo, hi) -> acc * (1L + hi - lo)) 1L
+    else
+      let mutable total = 0L
+      let rules = workflows[id]
+
+      for rule in rules do
+        match rule with
+        | GoTo x -> total <- total + countRanges ranges (getName x) workflows
+        | Comparison r ->
+          let lo, hi = ranges[r.key]
+
+          let trueForComparison =
+            if r.operator = Lt then
+              (lo, r.value - 1L)
+            else
+              (r.value + 1L, hi)
+
+          let falseForComparison = if r.operator = Lt then (r.value, hi) else (lo, r.value)
+
+          if fst trueForComparison <= snd trueForComparison then
+            let newRanges = Dictionary ranges
+            newRanges[r.key] <- trueForComparison
+            total <- total + countRanges newRanges (getName r.destination) workflows
+
+          if fst falseForComparison <= snd falseForComparison then
+            ranges[r.key] <- falseForComparison
+
+
+      total
+
+  let initialRange = 1L, 4000L
+
+  let ranges =
+    [ (X, initialRange); (M, initialRange); (A, initialRange); (S, initialRange) ]
+    |> Map.ofList
+    |> Dictionary
+
+  countRanges ranges "in" workflows
+
+partOne input |> printfn "Part one: %A"
+partTwo input |> printfn "Part two: %A"
