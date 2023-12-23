@@ -1,17 +1,22 @@
 #load "../../utils/Utils.fsx"
 
+open System.Collections.Generic
 open Utils
 
 let input = Input.readLines ()
 
-type Grid = Cell list list
+type Grid = {
+  rows: int
+  cols: int
+  grid: Dictionary<int * int, Cell>
+}
+
 and Cell =
   | Start
   | Garden
   | Rock
 
 module Parsing =
-
   let private parseCells chs =
     let rec inner xs acc =
       match xs with
@@ -24,32 +29,60 @@ module Parsing =
       | [] -> acc
 
     inner chs []
+    
+  let private ofListGrid grid =
+      let result = Dictionary<int * int, Cell>()
+      let rows = grid |> List.length
+      let cols = grid[0] |> List.length
+      for i = 0 to (rows - 1) do
+        for j = 0 to (cols - 1) do
+          result.Add((i, j), grid[i][j])
+  
+      { rows = rows; cols = cols; grid = result }
+
 
   let parse (lines: string array) =
     lines
     |> List.ofArray
     |> List.map (fun line -> line.ToCharArray() |> List.ofArray |> parseCells)
+    |> ofListGrid
 
+module InfiniteGrid =
+  let get (i, j) (state: Grid) =
+    match state.grid.TryGetValue((i, j)) with
+    | true, cell -> cell
+    | false, _ ->
+      let normalisedI =
+        if i < 0 then state.rows + i else i
+        |> fun i -> i % state.rows
+
+      let normalisedJ =
+        if j < 0 then state.cols + j else j
+        |> fun j -> j % state.cols
+
+      state.grid[normalisedI, normalisedJ]
+  
 type Message = { count: int; coord: int * int }
 
-let findStart grid =
+let findStart (grid: Grid) =
+  let keys = grid.grid.Keys |> List.ofSeq
   let rec inner i =
-    match grid |> List.tryItem i with
+    match keys |> List.tryItem i with
+    | Some k -> 
+      match grid.grid[k] with
+      | Start -> Some k
+      | _ -> inner (i + 1)
     | None -> None
-    | Some row ->
-      match row |> List.tryFindIndex (fun c -> c = Start) with
-      | Some j -> Some(i, j)
-      | None -> inner (i + 1)
 
   inner 0
 
 let nextSteps (i, j) grid =
-  let rows = grid |> List.length
-  let cols = grid[0] |> List.length
+  let rows = grid.rows 
+  let cols = grid.cols 
 
   [ (i + 1, j); (i - 1, j); (i, j + 1); (i, j - 1) ]
   |> List.choose (fun (x, y) ->
-    if x >= 0 && x < rows && y >= 0 && y < cols && grid[x][y] <> Rock then
+    if x >= 0 && x < rows && y >= 0 && y < cols && grid.grid[x, y] <> Rock then
       Some(x, y)
     else
       None)
@@ -73,8 +106,9 @@ let printGrid grid visited =
 
   printfn "\n"
 
-let rec partOne input =
+let partOne input =
   let grid = Parsing.parse input
+
   let rec getNextSteps grid acc =
     match acc |> Set.count with
     | 0 -> getNextSteps grid (grid |> findStart |> Option.toList |> Set.ofList)
@@ -86,12 +120,11 @@ let rec partOne input =
           Set.union acc (next |> Set.ofList))
         Set.empty
 
-
   let rec loop remainingSteps acc =
     match remainingSteps with
     | 0 -> acc
     | n -> loop (n - 1) (getNextSteps grid acc)
 
   loop 64 Set.empty |> Set.count
-  
+
 input |> partOne |> printfn "Part one %d"
