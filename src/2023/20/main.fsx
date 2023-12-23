@@ -11,120 +11,117 @@ type Pulse =
 
 type From = string
 type To = string
-type Message = From * Pulse * To list
+type Message = From * Pulse * To
+let toMessage from pulse to_ = from, pulse, to_
 
 type IHandlePulse =
-  abstract member handlePulse: From * Pulse -> Message option
+  abstract member handlePulse: From * Pulse -> Message list
   abstract member Id: string
   abstract member Outputs: string list
   abstract member addOutput: string -> unit
   abstract member addInput: string -> unit
 
-module Broadcaster =
-  type Broadcaster(id: string, outputs) =
-    let mutable state = outputs
-    member this.handlePulse = (this :> IHandlePulse).handlePulse
+type Broadcaster(id: string, outputs) =
+  let mutable state = outputs
+  member this.handlePulse = (this :> IHandlePulse).handlePulse
 
-    interface IHandlePulse with
-      member this.Id = id
-      member this.Outputs = state
+  interface IHandlePulse with
+    member this.Id = id
+    member this.Outputs = state
 
-      member this.addInput _ = ()
+    member this.addInput _ = ()
 
-      member this.addOutput(output: string) = state <- List.append state [ output ]
+    member this.addOutput(output: string) = state <- List.append state [ output ]
 
-      member this.handlePulse(_from: string, pulse: Pulse) = Some(id, pulse, state)
+    member this.handlePulse(_from: string, pulse: Pulse) = state |> List.map (toMessage id pulse)
 
-module FlipFlop =
-  type InternalState =
-    | On
-    | Off
+type FlipFlopState =
+  { internalState: InternalState
+    outputs: string list }
 
-  type State =
-    { internalState: InternalState
-      outputs: string list }
+and InternalState =
+  | On
+  | Off
 
-  type FlipFlop(id: string) =
-    let mutable state = { internalState = Off; outputs = [] }
+type FlipFlop(id: string) =
+  let mutable state = { internalState = Off; outputs = [] }
 
-    interface IHandlePulse with
-      member _.Id = id
+  interface IHandlePulse with
+    member _.Id = id
 
-      member this.Outputs = state.outputs
-      member this.addInput _ = ()
+    member this.Outputs = state.outputs
+    member this.addInput _ = ()
 
-      member _.addOutput(output: string) =
-        state <-
-          { state with
-              outputs = List.append state.outputs [ output ] }
+    member _.addOutput(output: string) =
+      state <-
+        { state with
+            outputs = List.append state.outputs [ output ] }
 
-      member _.handlePulse(from: string, pulse: Pulse) =
-        let internalState, messages =
-          match pulse, state.internalState with
-          | High, state -> state, None
-          | Low, On -> Off, Some(id, Low, state.outputs)
-          | Low, Off -> On, Some(id, High, state.outputs)
+    member _.handlePulse(from: string, pulse: Pulse) =
+      let internalState, messages =
+        match pulse, state.internalState with
+        | High, state -> state, []
+        | Low, On -> Off, state.outputs |> List.map (toMessage id Low)
+        | Low, Off -> On, state.outputs |> List.map (toMessage id High)
 
-        state <-
-          { state with
-              internalState = internalState }
+      state <-
+        { state with
+            internalState = internalState }
 
-        messages
+      messages
+
+type ConjunctionState =
+  {
+    // Remembers the last pulse received for each input module
+    inputs: Map<string, Pulse>
+    outputs: string list }
 
 
-module Conjunction =
-  type State =
-    {
-      // Remembers the last pulse received for each input module
-      inputs: Map<string, Pulse>
-      outputs: string list }
+type Conjunction(id: string) =
+  let mutable state = { inputs = Map.empty; outputs = [] }
 
-  type Conjunction(id: string) =
-    let mutable state = { inputs = Map.empty; outputs = [] }
+  interface IHandlePulse with
+    member _.addInput(input: string) =
+      state <-
+        { state with
+            inputs = Map.add input Low state.inputs }
 
-    interface IHandlePulse with
-      member _.addInput(input: string) =
-        state <-
-          { state with
-              inputs = Map.add input Low state.inputs }
+    member _.addOutput(output: string) =
+      state <-
+        { state with
+            outputs = List.append state.outputs [ output ] }
 
-      member _.addOutput(output: string) =
-        state <-
-          { state with
-              outputs = List.append state.outputs [ output ] }
+    member _.Id = id
+    member _.Outputs = state.outputs
 
-      member _.Id = id
-      member _.Outputs = state.outputs
+    member _.handlePulse(from: string, pulse: Pulse) =
+      let nextState =
+        { state with
+            inputs = Map.add from pulse state.inputs }
 
-      member _.handlePulse(from: string, pulse: Pulse) =
-        let nextState =
-          { state with
-              inputs = Map.add from pulse state.inputs }
+      let allHigh = nextState.inputs |> Map.forall (fun _ pulse -> pulse = High)
 
-        let allHigh = nextState.inputs |> Map.forall (fun _ pulse -> pulse = High)
-
-        if allHigh then
-          state <- nextState
-          // not sure about this? other way around?
-          Some(id, Low, state.outputs)
-        else
-          state <- nextState
-          Some(id, High, state.outputs)
+      if allHigh then
+        state <- nextState
+        state.outputs |> List.map (toMessage id Low)
+      else
+        state <- nextState
+        state.outputs |> List.map (toMessage id High)
 
 
 type Module =
-  | Broadcaster of IHandlePulse
-  | FlipFlop of IHandlePulse
-  | Conjunction of IHandlePulse
+  | B of IHandlePulse
+  | FF of IHandlePulse
+  | C of IHandlePulse
 
 type Modules = Map<string, Module>
 
 module Parsing =
   let private parseInput (string: string) : Module =
     match string with
-    | "broadcaster" -> Broadcaster(Broadcaster.Broadcaster("broadcaster", []))
-    | s when s.StartsWith("%") -> FlipFlop(FlipFlop.FlipFlop(s.Substring(1)))
-    | s when s.StartsWith("&") -> Conjunction(Conjunction.Conjunction(s.Substring(1)))
+    | "broadcaster" -> B(Broadcaster("broadcaster", []))
+    | s when s.StartsWith("%") -> FF(FlipFlop(s.Substring(1)))
+    | s when s.StartsWith("&") -> C(Conjunction(s.Substring(1)))
     | s -> failwithf "Couldn't parse input: %s" s
 
   let parseOutputs (string: string) =
@@ -143,21 +140,21 @@ module Parsing =
       |> Array.fold
         (fun acc (input, outputs) ->
           match input with
-          | Broadcaster x ->
+          | B x ->
             for output in outputs do
               x.addOutput output
 
-            acc @ [ x.Id, Broadcaster x ]
-          | FlipFlop x ->
+            acc @ [ x.Id, B x ]
+          | FF x ->
             for output in outputs do
               x.addOutput output
 
-            acc @ [ x.Id, FlipFlop x ]
-          | Conjunction x ->
+            acc @ [ x.Id, FF x ]
+          | C x ->
             for output in outputs do
               x.addOutput output
 
-            acc @ [ x.Id, Conjunction x ]
+            acc @ [ x.Id, C x ]
 
         )
         []
@@ -166,31 +163,31 @@ module Parsing =
     let conjunctionIds =
       modules
       |> List.filter (function
-        | _, Conjunction _ -> true
+        | _, C _ -> true
         | _ -> false)
       |> List.map fst
 
     modules
     |> List.iter (fun (id, m) ->
       match m with
-      | Module.Broadcaster x ->
+      | Module.B x ->
         let conjunctionOutputs =
           x.Outputs |> List.filter (fun x -> conjunctionIds |> List.contains x)
 
         conjunctionOutputs
         |> List.iter (fun conjunctionId ->
           match modules |> List.tryFind (fun (id, _) -> id = conjunctionId) with
-          | Some(_, Conjunction con) -> con.addInput id
+          | Some(_, C con) -> con.addInput id
           | _ -> ())
 
-      | Module.FlipFlop x ->
+      | Module.FF x ->
         let conjunctionOutputs =
           x.Outputs |> List.filter (fun x -> conjunctionIds |> List.contains x)
 
         conjunctionOutputs
         |> List.iter (fun conjunctionId ->
           match modules |> List.tryFind (fun (id, _) -> id = conjunctionId) with
-          | Some(_, Conjunction con) -> con.addInput id
+          | Some(_, C con) -> con.addInput id
           | _ -> ())
       | _ -> ())
 
@@ -214,29 +211,24 @@ let pushButton modules =
     match queue.Count with
     | 0 -> ()
     | _ ->
-      let from, pulse, outputs = queue.Dequeue()
+      let from, pulse, dest = queue.Dequeue()
 
-      outputs
-      |> List.map (fun output ->
-        match modules |> List.tryFind (fun (id, _) -> id = output) with
-        | Some(_, Broadcaster b) -> b.handlePulse (from, pulse)
-        | Some(_, FlipFlop f) -> f.handlePulse (from, pulse)
-        | Some(_, Conjunction c) -> c.handlePulse (from, pulse)
-        | _ -> None)
-      |> List.choose id
-      |> List.iter (fun (from, pulse, outputs) ->
-        for output in outputs do
-          enqueue (from, pulse, [ output ]))
+      match modules |> List.tryFind (fun (id, _) -> id = dest) with
+      | Some(_, B b) -> b.handlePulse (from, pulse)
+      | Some(_, FF f) -> f.handlePulse (from, pulse)
+      | Some(_, C c) -> c.handlePulse (from, pulse)
+      | _ -> []
+      |> List.iter enqueue
 
       loop ()
 
   match modules |> List.tryFind (fun x -> fst x = "broadcaster") with
-  | Some(_, Broadcaster broadcaster) ->
+  | Some(_, B broadcaster) ->
     match broadcaster.handlePulse ("button", Low) with
-    | None -> failwith "Couldn't broadcast message"
-    | Some(from, pulse, outputs) ->
-      for output in outputs do
-        enqueue (from, pulse, [ output ])
+    | [] -> failwith "Couldn't broadcast message"
+    | messages ->
+      for msg in messages do
+        enqueue msg
   | _ -> failwith "Couldn't find broadcaster"
 
   loop ()
