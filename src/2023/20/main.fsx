@@ -57,7 +57,7 @@ type FlipFlop(id: string) =
         { state with
             outputs = List.append state.outputs [ output ] }
 
-    member _.handlePulse(from: string, pulse: Pulse) =
+    member _.handlePulse(_from: string, pulse: Pulse) =
       let internalState, messages =
         match pulse, state.internalState with
         | High, state -> state, []
@@ -193,34 +193,45 @@ module Parsing =
 
     modules
 
-let modules = input |> Parsing.parse
 
-let pushButton modules =
+let pushButton modules cb =
   let mutable highPulses = 0
   let mutable lowPulses = 1 // button sends low pulse to broadcaster
   let queue = Queue<Message>()
 
+  let mutable reachedDest = false
+
   let enqueue message =
+    let from, pulse, _= message
+
+    match cb with
+    | Some f when pulse = High && f from -> reachedDest <- true
+    | _ -> ()
+
     queue.Enqueue message
 
     match message with
     | _, High, _ -> highPulses <- highPulses + 1
     | _, Low, _ -> lowPulses <- lowPulses + 1
 
+
   let rec loop () =
-    match queue.Count with
-    | 0 -> ()
-    | _ ->
-      let from, pulse, dest = queue.Dequeue()
+    if reachedDest then
+      ()
+    else
+      match queue.Count with
+      | 0 -> ()
+      | _ ->
+        let from, pulse, dest = queue.Dequeue()
 
-      match modules |> List.tryFind (fun (id, _) -> id = dest) with
-      | Some(_, B b) -> b.handlePulse (from, pulse)
-      | Some(_, FF f) -> f.handlePulse (from, pulse)
-      | Some(_, C c) -> c.handlePulse (from, pulse)
-      | _ -> []
-      |> List.iter enqueue
+        match modules |> List.tryFind (fun (id, _) -> id = dest) with
+        | Some(_, B b) -> b.handlePulse (from, pulse)
+        | Some(_, FF f) -> f.handlePulse (from, pulse)
+        | Some(_, C c) -> c.handlePulse (from, pulse)
+        | _ -> []
+        |> List.iter enqueue
 
-      loop ()
+        loop ()
 
   match modules |> List.tryFind (fun x -> fst x = "broadcaster") with
   | Some(_, B broadcaster) ->
@@ -232,18 +243,40 @@ let pushButton modules =
   | _ -> failwith "Couldn't find broadcaster"
 
   loop ()
-  lowPulses, highPulses
+  lowPulses, highPulses, reachedDest
 
 
 let partOne () =
+  let modules = input |> Parsing.parse
   let initialLowPulses, initialHighPulses = 0, 0
 
   { 1..1000 }
   |> Seq.fold
     (fun (modules, lo, hi) _ ->
-      let lowPulses, highPulses = pushButton modules
+      let lowPulses, highPulses, _ = pushButton modules None
       modules, lo + lowPulses, hi + highPulses)
     (modules, initialLowPulses, initialHighPulses)
   |> fun (_, lowPulses, highPulses) -> lowPulses * highPulses
 
+let getPressesForModuleToSendHigh modules id =
+  let mutable reachedDest = false
+  let mutable buttonPresses = 0
+
+  while not reachedDest do
+    let _, _, reached = pushButton modules (Some(fun x -> x = id))
+    buttonPresses <- buttonPresses + 1
+
+    if reached then
+      reachedDest <- true
+
+  buttonPresses
+
+let partTwo () =
+   // vg, nb, vc and ls must all send a high pulse for rx to have a low pulse
+  [ "vg"; "nb"; "vc"; "ls" ]
+  |> List.map (fun x -> getPressesForModuleToSendHigh (input |> Parsing.parse) x)
+  |> List.map int64
+  |> Maths.lcm
+
 partOne () |> printfn "part one: %d"
+partTwo () |> printfn "part two: %A"
