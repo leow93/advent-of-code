@@ -54,22 +54,52 @@ func levelIsSafe(lvl []int) bool {
 	return true
 }
 
-func partOne(matrix [][]int) string {
-	result := 0
+func removeAt(arr []int, idx int) []int {
+	var l []int
+	for j := 0; j < len(arr); j++ {
+		if j == idx {
+			continue
+		}
+		l = append(l, arr[j])
+	}
 
-	for _, lvl := range matrix {
-		if levelIsSafe(lvl) {
-			result += 1
+	return l
+}
+
+func levelIsSafePartTwo(lvl []int) bool {
+	safe := levelIsSafe(lvl)
+	if safe {
+		return true
+	}
+
+	for i := range len(lvl) {
+		l := removeAt(lvl, i)
+		safe := levelIsSafe(l)
+		if safe {
+			return true
 		}
 	}
 
-	// 269 too high
+	return false
+}
 
+func run(matrix [][]int, safetyFn func(lvl []int) bool) string {
+	result := 0
+
+	for _, lvl := range matrix {
+		if safetyFn(lvl) {
+			result += 1
+		}
+	}
 	return fmt.Sprintf("%d", result)
 }
 
-func partTwo() string {
-	return ""
+func partOne(matrix [][]int) string {
+	return run(matrix, levelIsSafe)
+}
+
+func partTwo(matrix [][]int) string {
+	return run(matrix, levelIsSafePartTwo)
 }
 
 func parseLines(lines []string) ([][]int, error) {
@@ -99,5 +129,5 @@ func Run(lines []string) (string, string, error) {
 		return "", "", err
 	}
 
-	return partOne(matrix), partTwo(), nil
+	return partOne(matrix), partTwo(matrix), nil
 }
