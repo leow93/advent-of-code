@@ -5,8 +5,6 @@ import (
 	"slices"
 	"strconv"
 	"strings"
-
-	"github.com/leow93/advent-of-code/2024/input"
 )
 
 func getLeftRight(lines []string) ([]int, []int, error) {
@@ -86,11 +84,7 @@ func partTwo(left []int, right []int) (string, error) {
 	return fmt.Sprintf("%d", result), nil
 }
 
-func Run(file string) (string, string, error) {
-	lines, err := input.ReadLines(file)
-	if err != nil {
-		return "", "", err
-	}
+func Run(lines []string) (string, string, error) {
 	left, right, err := getLeftRight(lines)
 	if err != nil {
 		return "", "", err

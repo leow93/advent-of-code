@@ -4,49 +4,32 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"strings"
 
 	"github.com/leow93/advent-of-code/2024/day1"
+	"github.com/leow93/advent-of-code/2024/day2"
+	"github.com/leow93/advent-of-code/2024/input"
 )
 
-type Runner func(file string) (string, string, error)
+type Runner func(input []string) (string, string, error)
 
 var days = map[string]Runner{
 	"day1": day1.Run,
-}
-
-func pathToFile(day, file string) string {
-	return fmt.Sprintf("./%s/%s", day, file)
-}
-
-func dayFromInput(file string) (string, error) {
-	parts := strings.Split(file, "/")
-	var day string
-	for _, p := range parts {
-		if strings.HasPrefix(p, "day") {
-			day = p
-			break
-		}
-	}
-	if day == "" {
-		return "", errors.New("day not found")
-	}
-	return day, nil
+	"day2": day2.Run,
 }
 
 func main() {
 	flag.Parse()
-	inputFile := flag.Arg(0)
-	day, err := dayFromInput(inputFile)
-	if err != nil {
-		panic(err)
-	}
+	day := flag.Arg(0)
 	runner, ok := days[day]
 	if !ok {
 		panic(errors.New("day " + day + " not found"))
 	}
 
-	part1, part2, err := runner(inputFile)
+	data, err := input.FromStdin()
+	if err != nil {
+		panic(err)
+	}
+	part1, part2, err := runner(data)
 	if err != nil {
 		panic(err)
 	}
