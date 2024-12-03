@@ -9,7 +9,7 @@ import (
 
 func partOne(input string) (string, error) {
 	result := 0
-	re := regexp.MustCompile(`mul\((?P<X>\d+),(?P<Y>\d+)\)`)
+	re := regexp.MustCompile(`mul\((\d+),(\d+)\)`)
 	for _, match := range re.FindAllStringSubmatch(input, -1) {
 		if len(match) < 3 {
 			continue
@@ -31,7 +31,7 @@ func partOne(input string) (string, error) {
 func partTwo(input string) (string, error) {
 	enabled := true
 	result := 0
-	re := regexp.MustCompile(`(mul\((?P<X>\d+),(?P<Y>\d+)\))|(do\(\))|(don't\(\))`)
+	re := regexp.MustCompile(`(mul\((\d+),(\d+)\))|(do\(\))|(don't\(\))`)
 
 	for _, match := range re.FindAllStringSubmatch(input, -1) {
 		if match[0] == "don't()" {
