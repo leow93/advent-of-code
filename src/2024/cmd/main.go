@@ -7,6 +7,7 @@ import (
 
 	"github.com/leow93/advent-of-code/2024/day1"
 	"github.com/leow93/advent-of-code/2024/day2"
+	"github.com/leow93/advent-of-code/2024/day3"
 	"github.com/leow93/advent-of-code/2024/input"
 )
 
@@ -15,6 +16,7 @@ type Runner func(input []string) (string, string, error)
 var days = map[string]Runner{
 	"day1": day1.Run,
 	"day2": day2.Run,
+	"day3": day3.Run,
 }
 
 func main() {
