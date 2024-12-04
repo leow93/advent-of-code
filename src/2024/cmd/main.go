@@ -8,6 +8,7 @@ import (
 	"github.com/leow93/advent-of-code/2024/day1"
 	"github.com/leow93/advent-of-code/2024/day2"
 	"github.com/leow93/advent-of-code/2024/day3"
+	"github.com/leow93/advent-of-code/2024/day4"
 	"github.com/leow93/advent-of-code/2024/input"
 )
 
@@ -17,6 +18,7 @@ var days = map[string]Runner{
 	"day1": day1.Run,
 	"day2": day2.Run,
 	"day3": day3.Run,
+	"day4": day4.Run,
 }
 
 func main() {
