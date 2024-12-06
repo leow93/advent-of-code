@@ -25,6 +25,17 @@ const parse = (input) => {
   };
 };
 
+const setGridValue = (grid, coord, value) => {
+  return grid.map((row, i) =>
+    row.map((x, j) => {
+      if (i === coord[0] && j === coord[1]) {
+        return value;
+      }
+      return x;
+    })
+  );
+};
+
 class CoordSet {
   data = new Set();
 
@@ -42,14 +53,18 @@ class CoordSet {
   }
 }
 
-const withinGrid = (grid, coord) => {
-  return (
-    coord[0] >= 0 &&
-    coord[0] < grid.length &&
-    coord[1] >= 0 &&
-    coord[1] < grid[0].length
-  );
-};
+class PositionSet {
+  data = new Set();
+  serialise(p) {
+    return `${p.direction}:${p.coord[0]}:${p.coord[1]}`;
+  }
+  add(position) {
+    this.data.add(this.serialise(position));
+  }
+  has(position) {
+    return this.data.has(this.serialise(position));
+  }
+}
 
 const handleNorth = (grid, position) => {
   const [i, j] = position.coord;
@@ -156,9 +171,51 @@ const walkToExit = (data) => {
   }
 };
 
+const detectLoop = (data) => {
+  const grid = data.grid;
+  let position = data.position;
+  const set = new PositionSet();
+
+  while (true) {
+    if (set.has(position)) {
+      return true;
+    }
+    set.add(position);
+    position = next(grid, position);
+    if (position == null) {
+      return false;
+    }
+  }
+};
+
 const partOne = walkToExit;
 
-const partTwo = (data) => 0;
+const partTwo = (data) => {
+  let count = 0;
+  const start = data.position;
+  const grid = data.grid;
+
+  for (let i = 0; i < grid.length; i++) {
+    const row = grid[i];
+    for (let j = 0; j < row.length; j++) {
+      const x = row[j];
+      const isStart = i === start.coord[0] && j === start.coord[1];
+      if (x === '#' || isStart) {
+        continue;
+      }
+      if (
+        detectLoop({
+          grid: setGridValue(grid, [i, j], '#'),
+          position: start,
+        })
+      ) {
+        count++;
+      }
+    }
+  }
+
+  return count;
+};
 
 const main = () => runner(parse, partOne, partTwo);
 
