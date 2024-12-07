@@ -1,5 +1,6 @@
 const runner = require('../../utils/runner');
 const filterMap = require('../../utils/filterMap');
+const sumBy = require('../../utils/sumBy');
 
 const parse = (input) =>
   filterMap(input.split('\n'), (line) => {
@@ -40,15 +41,8 @@ const combinations = (operators, numbers) => {
 const valid = (operators) => (values, target) =>
   combinations(operators, values).includes(target);
 
-const run = (valid) => (data) => {
-  let count = 0;
-  for (const { target, values } of data) {
-    if (valid(values, target)) {
-      count += target;
-    }
-  }
-  return count;
-};
+const run = (valid) =>
+  sumBy(({ target, values }) => (valid(values, target) ? target : 0));
 
 const partOne = run(valid([add, mult]));
 const partTwo = run(valid([add, mult, concat]));
