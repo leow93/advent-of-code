@@ -4,30 +4,6 @@ const makeFileBlock = (id) => ({ id, type: 'file' });
 const makeFreeBlock = (id) => ({ type: 'free' });
 
 const parse = (line) => {
-  return [parsePartOne(line), parsePartTwo(line)];
-};
-
-const parsePartOne = (line) => {
-  const result = [];
-
-  let id = 0;
-
-  for (let i = 0; i < line.length; i++) {
-    const mode = i % 2 === 0 ? 'file' : 'space';
-    const n = Number(line[i]);
-    if (mode === 'file') {
-      const blocks = Array.from({ length: n }).map(() => makeFileBlock(id));
-      result.push(...blocks);
-      id++;
-    } else {
-      const blocks = Array.from({ length: n }).map(() => makeFreeBlock());
-      result.push(...blocks);
-    }
-  }
-  return result;
-};
-
-const parsePartTwo = (line) => {
   const result = [];
 
   let id = 0;
@@ -54,12 +30,6 @@ const findLastIdx = (arr, search) => {
   return null;
 };
 
-const sorted = (input) => {
-  const lastFile = findLastIdx(input, (x) => x.type === 'file');
-  const firstFree = input.findIndex((x) => x.type === 'free');
-  return firstFree > lastFile;
-};
-
 const moveSingleBlock = (input) => {
   const arr = input.slice();
   const lastChIdx = findLastIdx(arr, (x) => x.type === 'file');
@@ -70,28 +40,11 @@ const moveSingleBlock = (input) => {
   return arr;
 };
 
-const moveWholeFile = (input) => {
-  const arr = input.slice();
-  const lastChIdx = findLastIdx(arr, (x) => x.type === 'file');
-  const firstEmptyIdx = arr.findIndex((x) => x.type === 'free');
-  arr[firstEmptyIdx] = arr[lastChIdx];
-  arr[lastChIdx] = makeFreeBlock();
-
-  return arr;
+const sorted = (input) => {
+  const lastFile = findLastIdx(input, (x) => x.type === 'file');
+  const firstFree = input.findIndex((x) => x.type === 'free');
+  return firstFree > lastFile;
 };
-
-const defrag = (mover, input) => {
-  let data = input.slice();
-  let i = 0;
-  while (!sorted(data)) {
-    data = mover(data);
-    i++;
-  }
-
-  return data;
-};
-
-module.exports.defrag = defrag;
 
 const checksum = (input) => {
   let result = 0;
@@ -104,11 +57,13 @@ const checksum = (input) => {
   return result;
 };
 
-const run = (mover) => (data) => {
-  const sorted = defrag(mover, data);
-  return checksum(sorted);
+const partOne = (input) => {
+  let data = input.slice();
+  while (!sorted(data)) {
+    data = moveSingleBlock(data);
+  }
+  return checksum(data);
 };
-const partOne = () => 633792189750; //run(moveSingleBlock);
 
 const findRange = (data, id) => {
   let start, length;
@@ -159,16 +114,8 @@ const freeBlocks = (data, before) => {
   return blocks;
 };
 
-const printBlocks = (data) => {
-  let result = '';
-  for (const b of data) {
-    result += b.type === 'free' ? '.' : b.id;
-  }
-  console.log(result);
-};
-
 const partTwo = (input) => {
-  let data = input[1].slice();
+  let data = input.slice();
   const maxId = Math.max(
     ...data.filter((x) => x.type === 'file').map((x) => x.id)
   );
