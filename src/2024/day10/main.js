@@ -28,13 +28,12 @@ const next = (grid, curr) => {
   });
 };
 
-const countTrailends = (grid, start, search) => {
+const dfs = (grid, start, search, cb) => {
   const queue = [start];
-  const trailheads = new Set();
   while (queue.length) {
     const curr = queue.shift();
     if (grid[curr[0]][curr[1]] === search) {
-      trailheads.add(`${curr[0]}:${curr[1]}`);
+      cb(curr);
       continue;
     }
     const neighbours = next(grid, curr);
@@ -42,25 +41,17 @@ const countTrailends = (grid, start, search) => {
       queue.unshift(n);
     }
   }
+};
 
+const countTrailends = (grid, start, search) => {
+  const trailheads = new Set();
+  dfs(grid, start, search, ([i, j]) => trailheads.add(`${i},${j}`));
   return trailheads.size;
 };
 
 const trailRating = (grid, start, search) => {
-  const queue = [start];
   let count = 0;
-  while (queue.length) {
-    const curr = queue.shift();
-    if (grid[curr[0]][curr[1]] === search) {
-      count++;
-      continue;
-    }
-    const neighbours = next(grid, curr);
-    for (const n of neighbours) {
-      queue.unshift(n);
-    }
-  }
-
+  dfs(grid, start, search, () => count++);
   return count;
 };
 
