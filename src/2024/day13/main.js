@@ -13,22 +13,6 @@ class Matrix {
     return this.a * this.d - this.b * this.c;
   }
 
-  inverse() {
-    const det = this.determinant();
-    if (det === 0) throw new Error('determinant === 0');
-    return new Matrix(this.d / det, -this.b / det, -this.c / det, this.a / det);
-  }
-
-  // TODO: remove?
-  multiply(vector) {
-    const [x, y] = vector;
-
-    const x1 = this.a * x + this.b * x;
-    const y1 = this.c * y + this.d * y;
-
-    return [x1, y1];
-  }
-
   multiplyInverse(vector) {
     const [x, y] = vector;
     const det = this.determinant();
