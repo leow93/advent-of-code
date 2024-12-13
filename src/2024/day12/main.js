@@ -85,7 +85,7 @@ const getPrice = (grid, region) => {
   return area * perimeter;
 };
 
-const getCornerSquares = (grid, region, row, col) => {
+const countCorners = (region) => {
   let corners = 0;
 
   const isInRegion = ([x, y]) => {
@@ -97,26 +97,43 @@ const getCornerSquares = (grid, region, row, col) => {
     return false;
   };
 
-  for (const [dx, dy] of [
-    [1, 1],
-    [1, -1],
-    [-1, 1],
-    [-1, -1],
-  ]) {
-    const diagonalRow = row + dx;
-    const diagonalCol = col + dy;
-    const neighbourOne = [row, diagonalCol];
-    const neighbourTwo = [diagonalRow, col];
+  for (const [x, y] of region) {
+    for (const [dx, dy] of [
+      [1, 1],
+      [1, -1],
+      [-1, 1],
+      [-1, -1],
+    ]) {
+      const diagonalRow = x + dx;
+      const diagonalCol = y + dy;
+      const neighbourOne = [x, diagonalCol];
+      const neighbourTwo = [diagonalRow, y];
 
-    if (isInRegion([diagonalRow, diagonalCol])) {
-      // The diagonal is part of the region. This can only be a corner piece if
-      // the neighbouring squares aren't part of the shape.
-      if (!isInRegion(neighbourOne) && !isInRegion(neighbourTwo)) {
-        corners++;
+      if (isInRegion([diagonalRow, diagonalCol])) {
+        // The diagonal is part of the region. This can only be a corner piece if
+        // the neighbouring squares aren't part of the shape.
+        // e.g. considering the central A, bottom right is a corner because B is not in the shape
+        // AAA
+        // AAB
+        // AAA
+        if (!isInRegion(neighbourOne) && !isInRegion(neighbourTwo)) {
+          corners++;
+        }
+      } else if (isInRegion(neighbourOne) === isInRegion(neighbourTwo)) {
+        // diagonal is not part of the shape,
+        // but either both neighbours are or neither of them are, so it's a corner
+        // e.g. considering the central A again, bottom right is a corner in both these examples:
+        //
+        // AAA
+        // AAA
+        // AAB
+        //
+        // or
+        //
+        // AAA
+        // AAB
+        // ABB
       }
-    } else if (isInRegion(neighbourOne) === isInRegion(neighbourTwo)) {
-      // diagonal is not part of the shape,
-      // but either both neighbours are or neither of them are, so it's a corner
       corners++;
     }
   }
@@ -124,16 +141,9 @@ const getCornerSquares = (grid, region, row, col) => {
   return corners;
 };
 
-const getNumCormers = (grid, region) => {
-  return region.reduce(
-    (count, [x, y]) => count + getCornerSquares(grid, region, x, y),
-    0
-  );
-};
-
-const getDiscountedPrice = (grid, region) => {
+const getDiscountedPrice = (_grid, region) => {
   const area = region.length;
-  const sides = getNumCormers(grid, region);
+  const sides = countCorners(region);
   return area * sides;
 };
 
