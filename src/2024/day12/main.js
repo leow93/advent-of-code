@@ -149,9 +149,4 @@ const partTwo = (grid) => {
   return rs.reduce(sum(grid, getDiscountedPrice), 0);
 };
 
-module.exports = {
-  getRegions,
-  parse,
-};
-
 if (require.main === module) runner(parse, partOne, partTwo);
