@@ -46,9 +46,7 @@ const parseMachine = (line) => {
 };
 
 // A b = n => b = A^-1 n
-const solve = (matrix, vector) => {
-  return matrix.multiplyInverse(vector);
-};
+const solve = (matrix, vector) => matrix.multiplyInverse(vector);
 
 const parse = (input) => {
   const machines = [];
@@ -64,16 +62,16 @@ const parse = (input) => {
 const buttonACost = 3;
 const buttonBCost = 1;
 
+const sumCosts = (costs) =>
+  costs.reduce((total, [a, b]) => total + a * buttonACost + b * buttonBCost, 0);
+
 const partOne = (machines) => {
   const costs = filterMap(machines, ({ matrix, vector }) => {
     const [a, b] = solve(matrix, vector);
     return Number.isInteger(a) && Number.isInteger(b) ? [a, b] : null;
   });
 
-  return costs.reduce(
-    (total, [a, b]) => total + a * buttonACost + b * buttonBCost,
-    0
-  );
+  return sumCosts(costs);
 };
 const partTwo = (machines) => {
   const costs = filterMap(machines, ({ matrix, vector }) => {
@@ -84,10 +82,7 @@ const partTwo = (machines) => {
     return Number.isInteger(a) && Number.isInteger(b) ? [a, b] : null;
   });
 
-  return costs.reduce(
-    (total, [a, b]) => total + a * buttonACost + b * buttonBCost,
-    0
-  );
+  return sumCosts(costs);
 };
 
 runner(parse, partOne, partTwo);
