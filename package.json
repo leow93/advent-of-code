@@ -24,5 +24,8 @@
     "rescript": "^9.1.4",
     "rescript-nodejs": "^14.1.0",
     "vitest": "^2.1.8"
+  },
+  "dependencies": {
+    "canvas": "^2.11.2"
   }
 }
