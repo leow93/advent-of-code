@@ -1,10 +1,12 @@
-package day1
+package main
 
 import (
 	"fmt"
 	"slices"
 	"strconv"
 	"strings"
+
+	"github.com/leow93/advent-of-code/2024/input"
 )
 
 func getLeftRight(lines []string) ([]int, []int, error) {
@@ -84,7 +86,7 @@ func partTwo(left []int, right []int) (string, error) {
 	return fmt.Sprintf("%d", result), nil
 }
 
-func Run(lines []string) (string, string, error) {
+func run(lines []string) (string, string, error) {
 	left, right, err := getLeftRight(lines)
 	if err != nil {
 		return "", "", err
@@ -99,4 +101,19 @@ func Run(lines []string) (string, string, error) {
 		return "", "", err
 	}
 	return one, two, nil
+}
+
+func main() {
+	i, err := input.FromStdin()
+	if err != nil {
+		panic(err)
+	}
+
+	one, two, err := run(i)
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Printf("Part I: %s\n", one)
+	fmt.Printf("Part II: %s\n", two)
 }

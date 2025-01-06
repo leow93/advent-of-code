@@ -1,9 +1,11 @@
-package day2
+package main
 
 import (
 	"fmt"
 	"strconv"
 	"strings"
+
+	"github.com/leow93/advent-of-code/2024/input"
 )
 
 func asc(a, b int) bool {
@@ -130,4 +132,19 @@ func Run(lines []string) (string, string, error) {
 	}
 
 	return partOne(matrix), partTwo(matrix), nil
+}
+
+func main() {
+	i, err := input.FromStdin()
+	if err != nil {
+		panic(err)
+	}
+
+	one, two, err := Run(i)
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Printf("Part I: %s\n", one)
+	fmt.Printf("Part II: %s\n", two)
 }

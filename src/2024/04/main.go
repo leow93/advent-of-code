@@ -1,7 +1,9 @@
-package day4
+package main
 
 import (
 	"fmt"
+
+	"github.com/leow93/advent-of-code/2024/input"
 )
 
 type grid [][]rune
@@ -193,4 +195,19 @@ func Run(input []string) (string, string, error) {
 	two := partTwo(grid)
 
 	return one, two, nil
+}
+
+func main() {
+	i, err := input.FromStdin()
+	if err != nil {
+		panic(err)
+	}
+
+	one, two, err := Run(i)
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Printf("Part I: %s\n", one)
+	fmt.Printf("Part II: %s\n", two)
 }

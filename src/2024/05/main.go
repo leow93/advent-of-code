@@ -1,4 +1,4 @@
-package day5
+package main
 
 import (
 	"errors"
@@ -6,6 +6,8 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+
+	"github.com/leow93/advent-of-code/2024/input"
 )
 
 type rule struct {
@@ -162,4 +164,19 @@ func Run(input []string) (string, string, error) {
 	two := partTwo(rs, us)
 
 	return one, two, nil
+}
+
+func main() {
+	i, err := input.FromStdin()
+	if err != nil {
+		panic(err)
+	}
+
+	one, two, err := Run(i)
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Printf("Part I: %s\n", one)
+	fmt.Printf("Part II: %s\n", two)
 }

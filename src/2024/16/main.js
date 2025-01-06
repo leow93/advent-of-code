@@ -227,33 +227,22 @@ async function partTwo(map, optimalScore) {
 
   const stop = pq.inspect();
   const bestPaths = new Set();
-  let minScore = Infinity;
   const visited = new Map(); // Tracks the lowest score to each (x, y, dirIndex)
 
   while (!pq.isEmpty()) {
     await new Promise((r) => setTimeout(r, 0));
     const item = pq.dequeue();
     const { x, y, dirIndex, score, path } = item;
-    // console.log({
-    //   x,
-    //   y,
-    //   dir: dir(dirIndex),
-    //   score,
-    //   path,
-    // });
     const key = `${x},${y},${dirIndex}`;
 
-    if (visited.has(key) && visited.get(key) < score) continue;
+    const currScore = visited.get(key);
+    if (currScore !== undefined && currScore < score) continue;
+    if (currScore !== undefined && currScore > optimalScore) continue;
     visited.set(key, score);
     if (x === end.x && y === end.y) {
-      if (score < minScore) {
-        minScore = score;
-        bestPaths.clear();
-      }
-      if (score === minScore) {
+      if (score === optimalScore) {
         path.forEach((tile) => bestPaths.add(tile));
       }
-
       continue;
     }
     // Move forward
