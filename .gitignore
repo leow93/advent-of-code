@@ -9,3 +9,5 @@ node_modules
 src/misc/**/*.js
 
 src/**/*.txt
+
+src/**/*.png
