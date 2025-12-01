@@ -23,7 +23,7 @@ const parse = (input) => {
   return [grid3, grid4];
 };
 
-const neigboursGen = (dimensions) => {
+const neighboursGen = (dimensions) => {
   // Generate all possible combinations of [-1, 0, 1] for the given dimensions
   function generateCombos(current, depth) {
     if (depth === dimensions) {
@@ -43,8 +43,8 @@ const neigboursGen = (dimensions) => {
   // Filter out the origin (all zeros)
   return combos.filter((combo) => !combo.every((val) => val === 0));
 };
-const neighbours3 = neigboursGen(3);
-const neighbours4 = neigboursGen(4);
+const neighbours3 = neighboursGen(3);
+const neighbours4 = neighboursGen(4);
 
 const boundariesGen = (n) => (grid) => {
   const result = Array.from({ length: n }).map(() => [Infinity, -Infinity]);
@@ -99,6 +99,48 @@ const runCycle3 = (grid) => {
   return result;
 };
 
+const runCycleGeneric = (grid, neighbours, boundaries) => {
+  const result = new Map(grid);
+
+  const limits = boundaries(grid);
+  // start with min values, working upwards
+  const curr = limits.map((x) => x[0]);
+  const queue = [curr];
+  const visited = new Set();
+
+  while (queue.length > 0) {
+    console.log(queue.length);
+    const curr = queue.shift();
+    const key = toKey(curr);
+    if (visited.has(key)) continue;
+    visited.add(key);
+    let activeNeighbours = 0;
+    const active = grid.get(key) === true;
+    for (const deltas of neighbours) {
+      const neighbour = curr.map((x, i) => x + deltas[i]);
+      const key = toKey(neighbour);
+      if (grid.get(key)) activeNeighbours++;
+
+      // enqueue valid neighbours too
+      if (neighbour.every((x, i) => x >= limits[i][0] && x <= limits[i][1])) {
+        queue.push(neighbour);
+      }
+    }
+    if (active) {
+      const newActive = activeNeighbours === 2 || activeNeighbours === 3;
+      result.set(key, newActive);
+      continue;
+    }
+
+    if (!active && activeNeighbours === 3) {
+      result.set(key, true);
+      continue;
+    }
+  }
+
+  return result;
+};
+
 const runCycle4 = (grid) => {
   const result = new Map(grid);
 
@@ -135,12 +177,33 @@ const runCycle4 = (grid) => {
 
   return result;
 };
+//const run = (data, runner) => {
+//  let grid = data;
+//  let n = 0;
+//  while (n < 6) {
+//    grid = runner(grid);
+//    n++;
+//  }
+//
+//  let count = 0;
+//  for (const active of grid.values()) {
+//    if (active) count++;
+//  }
+//
+//  return count;
+//};
+//
+//const partOne = ([data]) => run(data, runCycle3);
+//
+//const partTwo = ([_, data]) => run(data, runCycle4);
 
-const run = (data, runner) => {
+const run = (data, dimensions) => {
   let grid = data;
+  const neighbours = neighboursGen(dimensions);
+  const boundaries = boundariesGen(dimensions);
   let n = 0;
   while (n < 6) {
-    grid = runner(grid);
+    grid = runCycleGeneric(grid, neighbours, boundaries);
     n++;
   }
 
@@ -152,8 +215,8 @@ const run = (data, runner) => {
   return count;
 };
 
-const partOne = ([data]) => run(data, runCycle3);
+const partOne = ([data]) => ''; //run(data, 3);
 
-const partTwo = ([_, data]) => run(data, runCycle4);
+const partTwo = ([_, data]) => run(data, 4);
 
 runner(parse, partOne, partTwo);
