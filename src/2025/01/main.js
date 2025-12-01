@@ -1,6 +1,3 @@
-const assert = require('node:assert');
-const test = require('node:test');
-
 const runner = require('../../utils/runner');
 
 const parse = (x) =>
