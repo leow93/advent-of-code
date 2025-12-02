@@ -37,13 +37,6 @@ const parse = (input) => {
     roots: getRoots(map),
   };
 };
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const logger =
-  (enabled) =>
-  (...args) => {
-    if (!enabled) return;
-    return console.log(...args);
-  };
 
 const alphabetical = (a, b) => a.localeCompare(b);
 
@@ -80,6 +73,72 @@ const partOne = async ({ map, imap, roots }) => {
 
   return order;
 };
-const partTwo = (input) => null;
+const partTwo = ({ map, imap, roots }) => {
+  const availableWorkers = 5;
+  const seen = new Set();
+  const q = roots.slice().sort(alphabetical);
+  let order = '';
+  let work = [];
+
+  const ready = (x) => {
+    const dependents = imap[x];
+    if (!dependents) return true;
+    return dependents?.every((d) => seen.has(d)) ?? true;
+  };
+
+  const ttl = (id) => {
+    return 61 + id.charCodeAt(0) - 'A'.charCodeAt(0);
+  };
+
+  const simulateSecond = () => {
+    // check if any work can be removed
+    work = work
+      .map((w) => ({ id: w.id, ttl: w.ttl - 1 }))
+      .filter((item) => {
+        // it's done by this tick
+        const dead = item.ttl === 0;
+        if (dead) {
+          order += item.id;
+          seen.add(item.id);
+
+          const next = map[item.id];
+          for (const x of next ?? []) {
+            if (ready(x)) {
+              q.push(x);
+            } else {
+            }
+          }
+          q.sort(alphabetical);
+        }
+        return !dead;
+      });
+
+    // Try to schedule work if we have some availability
+    while (work.length < availableWorkers && q.length) {
+      const nextWork = q.shift();
+      if (seen.has(nextWork)) return;
+
+      if (!ready(nextWork)) {
+        // not ready, put this item back to the start of the queue
+        q.unshift(nextWork);
+        return;
+      }
+
+      work.push({ id: nextWork, ttl: ttl(nextWork) });
+    }
+  };
+
+  let seconds = 0;
+  while (true) {
+    simulateSecond();
+    if (q.length || work.length) {
+      seconds++;
+    } else {
+      break;
+    }
+  }
+
+  return seconds;
+};
 
 runner(parse, partOne, partTwo);
