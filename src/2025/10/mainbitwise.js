@@ -3,10 +3,14 @@ const parseIndicators = (str) => {
   const lights = str.slice(1, str.length - 1);
 
   return {
-    initialState: new Array(lights.length).fill(0),
-    required: Array.from({ length: lights.length }).map((_, i) =>
-      lights[i] === '.' ? 0 : 1
+    initialState: 0,
+    required: parseInt(
+      Array.from({ length: lights.length })
+        .map((_, i) => (lights[i] === '.' ? '0' : '1'))
+        .join(''),
+      2
     ),
+    length: lights.length,
   };
 };
 const parseJoltage = (str) => {
@@ -15,10 +19,20 @@ const parseJoltage = (str) => {
 };
 const parseButtons = (buttons, length) => {
   return buttons.map((b) => {
-    return b
+    const indices = b
       .slice(1, b.length - 1)
       .split(',')
       .map(Number);
+    let mask = 0;
+    for (let i = 0; i < indices.length; i++) {
+      // Invert the index:
+      // Index 0 shifts to the far left (length - 1)
+      // Index 4 shifts to the far right (0)
+      const shift = length - 1 - indices[i];
+
+      mask |= 1 << shift;
+    }
+    return mask;
   });
 };
 const parseMachine = (line) => {
@@ -54,25 +68,14 @@ function combinationsOfSize(arr, k) {
   backtrack(0);
   return result;
 }
-const pushButton = (state, button) => {
-  const result = state.slice();
-  for (const i of button) {
-    result[i] = 1 - result[i];
-  }
-  return result;
-};
-const eq = (xs, ys) => {
-  if (xs.length !== ys.length) return false;
-  return xs.every((x, i) => x === ys[i]);
-};
 const fewestButtonCount = (machine, id) => {
   const { buttons, initialState, required } = machine;
   let c = 1;
   while (true) {
     const combos = combinationsOfSize(buttons, c);
     for (const buttons of combos) {
-      const result = buttons.reduce(pushButton, initialState);
-      if (eq(result, required)) {
+      const result = buttons.reduce((acc, b) => (acc ^= b), initialState);
+      if (result === required) {
         return buttons.length;
       }
     }
