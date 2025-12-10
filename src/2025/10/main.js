@@ -1,4 +1,6 @@
+const solver = require('javascript-lp-solver');
 const runner = require('../../utils/runner');
+
 const parseIndicators = (str) => {
   const lights = str.slice(1, str.length - 1);
 
@@ -79,12 +81,57 @@ const fewestButtonCount = (machine, id) => {
     c++;
   }
 };
-
 const partOne = (machines) =>
   machines.reduce(
     (count, machine, i) => count + fewestButtonCount(machine, i),
     0
   );
-const partTwo = () => {};
+
+function solveILP(targetVector, instructions) {
+  const model = {
+    optimize: 'totalCost', // We want to minimize this variable
+    opType: 'min',
+    constraints: {},
+    variables: {},
+    ints: {}, // Forces variables to be Integers
+  };
+
+  // 2. Define Constraints (The Target Vector)
+  // Each index in the target vector is a constraint equation:
+  // Inst_A * A_i + Inst_B * B_i ... = Target_i
+  targetVector.forEach((val, idx) => {
+    model.constraints[`c_${idx}`] = { equal: val };
+  });
+
+  instructions.forEach((instrIndices, i) => {
+    const varName = `instr_${i}`;
+
+    // This variable contributes 1 to our "totalCost" (count of ops)
+    const variable = { totalCost: 1 };
+
+    // This variable affects specific constraints (vector indices)
+    instrIndices.forEach((targetIdx) => {
+      variable[`c_${targetIdx}`] = 1;
+    });
+
+    model.variables[varName] = variable;
+
+    // Enforce Integer constraint
+    model.ints[varName] = 1;
+  });
+
+  const results = solver.Solve(model);
+
+  if (!results.feasible) {
+    throw new Error('not possible');
+  }
+  return results.result;
+}
+
+const partTwo = (machines) =>
+  machines.reduce(
+    (count, machine, i) => count + solveILP(machine.joltage, machine.buttons),
+    0
+  );
 
 runner(parse, partOne, partTwo);
