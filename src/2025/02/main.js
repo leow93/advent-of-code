@@ -1,4 +1,3 @@
-const assert = require('node:assert');
 const runner = require('../../utils/runner');
 
 const parse = (x) => x.split(',').map((range) => range.split('-').map(Number));
