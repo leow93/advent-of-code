@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/leow93/advent-of-code/2019/intcode"
 	"github.com/leow93/advent-of-code/utils"
 )
 
@@ -24,29 +25,6 @@ func parse(lines []string) []int {
 	return result
 }
 
-func runProgram(program []int) int {
-	i := 0
-
-	for i < len(program)-3 {
-		opcode := program[i]
-		if opcode == 99 {
-			return program[0]
-		}
-		a := program[i+1]
-		b := program[i+2]
-		idx := program[i+3]
-		if opcode == 1 {
-			program[idx] = program[a] + program[b]
-		}
-		if opcode == 2 {
-			program[idx] = program[a] * program[b]
-		}
-
-		i += 4
-	}
-	return -1
-}
-
 func partOne(program []int) int {
 	p := make([]int, len(program))
 	copy(p, program)
@@ -54,7 +32,11 @@ func partOne(program []int) int {
 	p[1] = 12
 	p[2] = 2
 
-	return runProgram(p)
+	err := intcode.RunProgram(p, nil)
+	if err != nil {
+		panic(err)
+	}
+	return p[0]
 }
 
 func partTwo(program []int) int {
@@ -66,8 +48,11 @@ func partTwo(program []int) int {
 			copy(p, program)
 			p[1] = i
 			p[2] = j
-
-			if result := runProgram(p); result == target {
+			err := intcode.RunProgram(p, nil)
+			if err != nil {
+				panic(err)
+			}
+			if p[0] == target {
 				return (100 * i) + j
 			}
 		}
