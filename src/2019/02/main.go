@@ -32,7 +32,7 @@ func partOne(program []int) int {
 	p[1] = 12
 	p[2] = 2
 
-	err := intcode.RunProgram(p, nil)
+	err := intcode.RunProgram(p, nil, nil)
 	if err != nil {
 		panic(err)
 	}
@@ -48,7 +48,7 @@ func partTwo(program []int) int {
 			copy(p, program)
 			p[1] = i
 			p[2] = j
-			err := intcode.RunProgram(p, nil)
+			err := intcode.RunProgram(p, nil, nil)
 			if err != nil {
 				panic(err)
 			}
