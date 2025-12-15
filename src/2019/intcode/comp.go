@@ -2,6 +2,7 @@ package intcode
 
 import (
 	"fmt"
+	"sync"
 )
 
 type mode int
@@ -141,6 +142,179 @@ func parseOpcode(code int) opcode {
 	}
 
 	return opcode{oc, modes}
+}
+
+type Computer struct {
+	program []int
+	input   chan int
+	output  chan int
+	closed  bool
+	mx      sync.RWMutex
+}
+
+func New(program []int, input chan int, output chan int) *Computer {
+	p := make([]int, len(program))
+	copy(p, program)
+	return &Computer{p, input, output, false, sync.RWMutex{}}
+}
+
+func (c *Computer) stop() {
+	close(c.input)
+	close(c.output)
+	c.closed = true
+}
+
+type inputMsg struct {
+	msgType string
+	data    int
+}
+
+func instructionMsg(data int) inputMsg {
+	return inputMsg{
+		msgType: "instruction",
+		data:    data,
+	}
+}
+
+func shutdownMsg() inputMsg {
+	return inputMsg{
+		msgType: "shutdown",
+	}
+}
+
+func (c *Computer) executeProgram() error {
+	defer func() {
+		c.sendInput(shutdownMsg())
+	}()
+	return RunProgram(c.program, c.input, c.output)
+}
+
+func (c *Computer) sendInput(msg inputMsg) {
+	c.mx.Lock()
+	defer c.mx.Unlock()
+	if c.closed {
+		return
+	}
+
+	switch msg.msgType {
+	case "instruction":
+		c.input <- msg.data
+		return
+	case "shutdown":
+		c.stop()
+		return
+	}
+}
+
+func NewSeries(program []int, n int) []*Computer {
+	if n < 1 {
+		return nil
+	}
+	comps := make([]*Computer, n)
+	for i := range n {
+		comps[i] = New(program, make(chan int), make(chan int))
+	}
+	return comps
+}
+
+type loopMsg struct {
+	dest int
+	data int
+}
+
+func runSeries(comps []*Computer, nextComp func(idx int) (int, *Computer), input int, phases ...int) int {
+	q := make(chan loopMsg)
+	qdone := make(chan struct{})
+	var result int
+	phasesWg := sync.WaitGroup{}
+	phasesWg.Add(len(comps))
+
+	go func() {
+		for msg := range q {
+			c := comps[msg.dest]
+			c.sendInput(instructionMsg(msg.data))
+		}
+		qdone <- struct{}{}
+	}()
+
+	// set phases on the machines
+	for idx, comp := range comps {
+		go func(i int, c *Computer) {
+			defer phasesWg.Done()
+			if idx < len(phases) {
+				comp.sendInput(instructionMsg(phases[idx]))
+			}
+			// send inital input to first computer
+			if idx == 0 {
+				comp.sendInput(instructionMsg(input))
+			}
+		}(idx, comp)
+	}
+
+	executionWg := sync.WaitGroup{}
+	executionWg.Add(len(comps))
+	// run
+	for idx, comp := range comps {
+		go func(i int, c *Computer) {
+			defer executionWg.Done()
+			err := c.executeProgram()
+			if err != nil {
+				panic(err)
+			}
+		}(idx, comp)
+	}
+
+	// wait for phases to be set
+	phasesWg.Wait()
+
+	outWg := sync.WaitGroup{}
+	outWg.Add(len(comps))
+	// pipe output into next computer
+	for idx, comp := range comps {
+		go func(i int, c *Computer) {
+			defer outWg.Done()
+			for x := range comp.output {
+				if i == len(comps)-1 {
+					result = x
+				}
+
+				nextIdx, nextComp := nextComp(i)
+				if nextComp != nil {
+					q <- loopMsg{
+						dest: nextIdx,
+						data: x,
+					}
+				}
+
+			}
+		}(idx, comp)
+	}
+	executionWg.Wait()
+	outWg.Wait()
+	close(q)
+	<-qdone
+
+	return result
+}
+
+func RunSeries(comps []*Computer, input int, phases ...int) int {
+	nextComp := func(idx int) (int, *Computer) {
+		if idx >= len(comps)-1 {
+			return -1, nil
+		}
+		return idx + 1, comps[idx+1]
+	}
+	return runSeries(comps, nextComp, input, phases...)
+}
+
+func RunSeriesLoop(comps []*Computer, input int, phases ...int) int {
+	nextComp := func(idx int) (int, *Computer) {
+		if idx >= len(comps)-1 {
+			return 0, comps[0]
+		}
+		return idx + 1, comps[idx+1]
+	}
+	return runSeries(comps, nextComp, input, phases...)
 }
 
 func RunProgram(program []int, input <-chan int, o chan<- int) error {

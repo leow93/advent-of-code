@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-	"sync"
 
 	"github.com/leow93/advent-of-code/2019/intcode"
 	"github.com/leow93/advent-of-code/utils"
@@ -26,50 +25,14 @@ func parse(lines []string) []int {
 	return result
 }
 
-func run(program []int, in int) int {
-	p := make([]int, len(program))
-	copy(p, program)
-
-	var result int
-	input := make(chan int)
-	output := make(chan int)
-	done := make(chan struct{})
-
-	ioWg := sync.WaitGroup{}
-	ioWg.Add(2)
-
-	go func() {
-		err := intcode.RunProgram(p, input, output)
-		if err != nil {
-			panic(err)
-		}
-		done <- struct{}{}
-	}()
-	go func() {
-		defer ioWg.Done()
-		input <- in
-	}()
-
-	go func() {
-		defer ioWg.Done()
-		for x := range output {
-			result = x
-			fmt.Println(result)
-		}
-	}()
-	<-done
-	close(input)
-	close(output)
-
-	ioWg.Wait()
-	return result
-}
-
 func main() {
 	lines := utils.ReadLines()
 	p := parse(lines)
-	p1 := run(p, 1)
+
+	c := intcode.NewSeries(p, 1)
+	p1 := intcode.RunSeries(c, 1)
 	fmt.Println("Part I", p1)
-	p2 := run(p, 5)
+	c = intcode.NewSeries(p, 1)
+	p2 := intcode.RunSeries(c, 5)
 	fmt.Println("Part II", p2)
 }
