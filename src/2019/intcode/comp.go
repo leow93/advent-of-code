@@ -10,14 +10,31 @@ type mode int
 const (
 	position mode = iota
 	immediate
+	relative
 )
 
 func getValue(p *memory, i int64, m mode) int64 {
-	if m == immediate {
+	switch m {
+	case immediate:
 		return p.Get(i)
+	case relative:
+		return p.Get(p.Get(i) + p.GetBase())
+	case position:
+		return p.Get(p.Get(i))
+	default:
+		panic(fmt.Sprintf("unexpected mode: %d", m))
 	}
+}
 
-	return p.Get(p.Get(i))
+func getWriteIndex(p *memory, i int64, m mode) int64 {
+	switch m {
+	case relative:
+		return p.Get(i) + p.GetBase()
+	case position:
+		return p.Get(i)
+	default:
+		panic(fmt.Sprintf("unexpected mode: %d", m))
+	}
 }
 
 func add(p *memory, i int64, m []mode) {
@@ -25,7 +42,7 @@ func add(p *memory, i int64, m []mode) {
 	a := getValue(p, i+1, aMode)
 	bMode := m[1]
 	b := getValue(p, i+2, bMode)
-	idx := p.Get(i + 3)
+	idx := getWriteIndex(p, i+3, m[2])
 
 	p.Set(idx, a+b)
 }
@@ -35,7 +52,7 @@ func mul(p *memory, i int64, m []mode) {
 	a := getValue(p, i+1, aMode)
 	bMode := m[1]
 	b := getValue(p, i+2, bMode)
-	idx := p.Get(i + 3)
+	idx := getWriteIndex(p, i+3, m[2])
 
 	p.Set(idx, a*b)
 }
@@ -67,7 +84,7 @@ func lt(p *memory, i int64, m []mode) {
 	a := getValue(p, i+1, aMode)
 	bMode := m[1]
 	b := getValue(p, i+2, bMode)
-	idx := p.Get(i + 3)
+	idx := getWriteIndex(p, i+3, m[2])
 	if a < b {
 		p.Set(idx, 1)
 	} else {
@@ -76,11 +93,10 @@ func lt(p *memory, i int64, m []mode) {
 }
 
 func eq(p *memory, i int64, m []mode) {
-	aMode := m[0]
-	a := getValue(p, i+1, aMode)
-	bMode := m[1]
-	b := getValue(p, i+2, bMode)
-	idx := p.Get(i + 3)
+	a := getValue(p, i+1, m[0])
+	b := getValue(p, i+2, m[1])
+	idx := getWriteIndex(p, i+3, m[2])
+
 	if a == b {
 		p.Set(idx, 1)
 	} else {
@@ -88,10 +104,18 @@ func eq(p *memory, i int64, m []mode) {
 	}
 }
 
-func saveFromInput(p *memory, i int64, input <-chan int64) {
+func setBase(p *memory, i int64, m []mode) int64 {
+	a := getValue(p, i+1, m[0])
+	base := p.GetBase()
+	p.SetBase(base + a)
+	return i + 2
+}
+
+func saveFromInput(p *memory, i int64, input <-chan int64, modes []mode) int64 {
 	x := <-input
-	idx := p.Get(i + 1)
+	idx := getWriteIndex(p, i+1, modes[0])
 	p.Set(idx, x)
+	return i + 2
 }
 
 func output(p *memory, i int64, m []mode, o chan<- int64) {
@@ -145,17 +169,19 @@ func parseOpcode(code int64) opcode {
 }
 
 type Computer struct {
-	memory *memory
-	input  chan int64
-	output chan int64
-	closed bool
-	mx     sync.RWMutex
+	memory       *memory
+	input        chan int64
+	output       chan int64
+	closed       bool
+	relativeBase int64
+	mx           sync.RWMutex
 }
 
 func New(program []int64, input chan int64, output chan int64) *Computer {
 	p := make([]int64, len(program))
 	copy(p, program)
-	return &Computer{NewMemory(p), input, output, false, sync.RWMutex{}}
+	relativeBase := int64(0)
+	return &Computer{NewMemory(p), input, output, false, relativeBase, sync.RWMutex{}}
 }
 
 func (c *Computer) stop() {
@@ -331,7 +357,8 @@ func RunProgram(program *memory, input <-chan int64, o chan<- int64) error {
 		case 2:
 			mul(program, i, oc.modes)
 		case 3:
-			saveFromInput(program, i, input)
+			i = saveFromInput(program, i, input, oc.modes)
+			continue
 		case 4:
 			output(program, i, oc.modes, o)
 		case 5:
@@ -344,11 +371,14 @@ func RunProgram(program *memory, input <-chan int64, o chan<- int64) error {
 			lt(program, i, oc.modes)
 		case 8:
 			eq(program, i, oc.modes)
-
+		case 9:
+			i = setBase(program, i, oc.modes)
+			continue
 		default:
 			return fmt.Errorf("failed at i=%d, opcode=%+v", i, oc)
 		}
 
 		i += int64(len(oc.modes) + 1)
+
 	}
 }

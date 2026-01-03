@@ -1,11 +1,14 @@
 package intcode
 
-import "sync"
+import (
+	"sync"
+)
 
 type memory struct {
 	mx     sync.RWMutex
 	data   map[int64]int64
 	maxKey int64
+	base   int64
 }
 
 func NewMemory(program []int64) *memory {
@@ -21,6 +24,7 @@ func NewMemory(program []int64) *memory {
 		mx:     sync.RWMutex{},
 		data:   data,
 		maxKey: maxKey,
+		base:   0,
 	}
 }
 
@@ -38,6 +42,18 @@ func (m *memory) Set(i int64, x int64) {
 	if i > m.maxKey {
 		m.maxKey = i
 	}
+}
+
+func (m *memory) SetBase(x int64) {
+	m.mx.Lock()
+	defer m.mx.Unlock()
+	m.base = x
+}
+
+func (m *memory) GetBase() int64 {
+	m.mx.RLock()
+	defer m.mx.RUnlock()
+	return m.base
 }
 
 func (m *memory) MaxKey() int64 {
