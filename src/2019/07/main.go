@@ -9,18 +9,18 @@ import (
 	"github.com/leow93/advent-of-code/utils"
 )
 
-func parse(lines []string) []int {
+func parse(lines []string) []int64 {
 	// just need first line
 	line := lines[0]
 	parts := strings.Split(line, ",")
-	result := make([]int, len(parts))
+	result := make([]int64, len(parts))
 
 	for i, p := range parts {
 		x, err := strconv.Atoi(p)
 		if err != nil {
 			panic(err)
 		}
-		result[i] = x
+		result[i] = int64(x)
 	}
 	return result
 }
@@ -46,8 +46,8 @@ func permute(nums []int) [][]int {
 	return res
 }
 
-func partOne(p []int) int {
-	max := 0
+func partOne(p []int64) int64 {
+	var max int64
 	phases := permute([]int{0, 1, 2, 3, 4})
 	for _, ph := range phases {
 		comps := intcode.NewSeries(p, 5)
@@ -58,8 +58,8 @@ func partOne(p []int) int {
 	return max
 }
 
-func partTwo(p []int) int {
-	max := 0
+func partTwo(p []int64) int64 {
+	var max int64
 	phases := permute([]int{5, 6, 7, 8, 9})
 	for _, ph := range phases {
 		comps := intcode.NewSeries(p, 5)

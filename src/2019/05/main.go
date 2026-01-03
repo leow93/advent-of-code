@@ -9,18 +9,18 @@ import (
 	"github.com/leow93/advent-of-code/utils"
 )
 
-func parse(lines []string) []int {
+func parse(lines []string) []int64 {
 	// just need first line
 	line := lines[0]
 	parts := strings.Split(line, ",")
-	result := make([]int, len(parts))
+	result := make([]int64, len(parts))
 
 	for i, p := range parts {
 		x, err := strconv.Atoi(p)
 		if err != nil {
 			panic(err)
 		}
-		result[i] = x
+		result[i] = int64(x)
 	}
 	return result
 }

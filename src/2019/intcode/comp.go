@@ -12,93 +12,93 @@ const (
 	immediate
 )
 
-func getValue(p []int, i int, m mode) int {
+func getValue(p *memory, i int64, m mode) int64 {
 	if m == immediate {
-		return p[i]
+		return p.Get(i)
 	}
 
-	return p[p[i]]
+	return p.Get(p.Get(i))
 }
 
-func add(p []int, i int, m []mode) {
+func add(p *memory, i int64, m []mode) {
 	aMode := m[0]
 	a := getValue(p, i+1, aMode)
 	bMode := m[1]
 	b := getValue(p, i+2, bMode)
-	idx := p[i+3]
+	idx := p.Get(i + 3)
 
-	p[idx] = a + b
+	p.Set(idx, a+b)
 }
 
-func mul(p []int, i int, m []mode) {
+func mul(p *memory, i int64, m []mode) {
 	aMode := m[0]
 	a := getValue(p, i+1, aMode)
 	bMode := m[1]
 	b := getValue(p, i+2, bMode)
-	idx := p[i+3]
+	idx := p.Get(i + 3)
 
-	p[idx] = a * b
+	p.Set(idx, a*b)
 }
 
-func jit(p []int, i int, m []mode) int {
+func jit(p *memory, i int64, m []mode) int64 {
 	aMode := m[0]
 	a := getValue(p, i+1, aMode)
 	if a == 0 {
-		return i + 3
+		return int64(i + 3)
 	}
 	bMode := m[1]
 	b := getValue(p, i+2, bMode)
 	return b
 }
 
-func jif(p []int, i int, m []mode) int {
+func jif(p *memory, i int64, m []mode) int64 {
 	aMode := m[0]
 	a := getValue(p, i+1, aMode)
 	if a != 0 {
-		return i + 3
+		return int64(i + 3)
 	}
 	bMode := m[1]
 	b := getValue(p, i+2, bMode)
 	return b
 }
 
-func lt(p []int, i int, m []mode) {
+func lt(p *memory, i int64, m []mode) {
 	aMode := m[0]
 	a := getValue(p, i+1, aMode)
 	bMode := m[1]
 	b := getValue(p, i+2, bMode)
-	idx := p[i+3]
+	idx := p.Get(i + 3)
 	if a < b {
-		p[idx] = 1
+		p.Set(idx, 1)
 	} else {
-		p[idx] = 0
+		p.Set(idx, 0)
 	}
 }
 
-func eq(p []int, i int, m []mode) {
+func eq(p *memory, i int64, m []mode) {
 	aMode := m[0]
 	a := getValue(p, i+1, aMode)
 	bMode := m[1]
 	b := getValue(p, i+2, bMode)
-	idx := p[i+3]
+	idx := p.Get(i + 3)
 	if a == b {
-		p[idx] = 1
+		p.Set(idx, 1)
 	} else {
-		p[idx] = 0
+		p.Set(idx, 0)
 	}
 }
 
-func saveFromInput(p []int, i int, input <-chan int) {
+func saveFromInput(p *memory, i int64, input <-chan int64) {
 	x := <-input
-	idx := p[i+1]
-	p[idx] = x
+	idx := p.Get(i + 1)
+	p.Set(idx, x)
 }
 
-func output(p []int, i int, m []mode, o chan<- int) {
+func output(p *memory, i int64, m []mode, o chan<- int64) {
 	o <- getValue(p, i+1, m[0])
 }
 
-func getDigit(num, position int) int {
+func getDigit(num, position int64) int64 {
 	if num < 0 {
 		num = -num
 	}
@@ -111,11 +111,11 @@ func getDigit(num, position int) int {
 }
 
 type opcode struct {
-	opcode int
+	opcode int64
 	modes  []mode
 }
 
-func parseOpcode(code int) opcode {
+func parseOpcode(code int64) opcode {
 	if code == 99 {
 		return opcode{99, nil}
 	}
@@ -123,7 +123,7 @@ func parseOpcode(code int) opcode {
 	if code == 3 {
 		return opcode{3, []mode{position}}
 	}
-	digitsRTL := []int{
+	digitsRTL := []int64{
 		getDigit(code, 0),
 		getDigit(code, 1),
 		getDigit(code, 2),
@@ -145,17 +145,17 @@ func parseOpcode(code int) opcode {
 }
 
 type Computer struct {
-	program []int
-	input   chan int
-	output  chan int
-	closed  bool
-	mx      sync.RWMutex
+	memory *memory
+	input  chan int64
+	output chan int64
+	closed bool
+	mx     sync.RWMutex
 }
 
-func New(program []int, input chan int, output chan int) *Computer {
-	p := make([]int, len(program))
+func New(program []int64, input chan int64, output chan int64) *Computer {
+	p := make([]int64, len(program))
 	copy(p, program)
-	return &Computer{p, input, output, false, sync.RWMutex{}}
+	return &Computer{NewMemory(p), input, output, false, sync.RWMutex{}}
 }
 
 func (c *Computer) stop() {
@@ -166,10 +166,10 @@ func (c *Computer) stop() {
 
 type inputMsg struct {
 	msgType string
-	data    int
+	data    int64
 }
 
-func instructionMsg(data int) inputMsg {
+func instructionMsg(data int64) inputMsg {
 	return inputMsg{
 		msgType: "instruction",
 		data:    data,
@@ -186,7 +186,7 @@ func (c *Computer) executeProgram() error {
 	defer func() {
 		c.sendInput(shutdownMsg())
 	}()
-	return RunProgram(c.program, c.input, c.output)
+	return RunProgram(c.memory, c.input, c.output)
 }
 
 func (c *Computer) sendInput(msg inputMsg) {
@@ -206,26 +206,26 @@ func (c *Computer) sendInput(msg inputMsg) {
 	}
 }
 
-func NewSeries(program []int, n int) []*Computer {
+func NewSeries(program []int64, n int) []*Computer {
 	if n < 1 {
 		return nil
 	}
 	comps := make([]*Computer, n)
 	for i := range n {
-		comps[i] = New(program, make(chan int), make(chan int))
+		comps[i] = New(program, make(chan int64), make(chan int64))
 	}
 	return comps
 }
 
 type loopMsg struct {
 	dest int
-	data int
+	data int64
 }
 
-func runSeries(comps []*Computer, nextComp func(idx int) (int, *Computer), input int, phases ...int) int {
+func runSeries(comps []*Computer, nextComp func(idx int) (int, *Computer), input int64, phases ...int) int64 {
 	q := make(chan loopMsg)
 	qdone := make(chan struct{})
-	var result int
+	var result int64
 	phasesWg := sync.WaitGroup{}
 	phasesWg.Add(len(comps))
 
@@ -242,7 +242,7 @@ func runSeries(comps []*Computer, nextComp func(idx int) (int, *Computer), input
 		go func(i int, c *Computer) {
 			defer phasesWg.Done()
 			if idx < len(phases) {
-				comp.sendInput(instructionMsg(phases[idx]))
+				comp.sendInput(instructionMsg(int64(phases[idx])))
 			}
 			// send inital input to first computer
 			if idx == 0 {
@@ -269,7 +269,7 @@ func runSeries(comps []*Computer, nextComp func(idx int) (int, *Computer), input
 
 	outWg := sync.WaitGroup{}
 	outWg.Add(len(comps))
-	// pipe output into next computer
+	// pipe output int64o next computer
 	for idx, comp := range comps {
 		go func(i int, c *Computer) {
 			defer outWg.Done()
@@ -297,7 +297,7 @@ func runSeries(comps []*Computer, nextComp func(idx int) (int, *Computer), input
 	return result
 }
 
-func RunSeries(comps []*Computer, input int, phases ...int) int {
+func RunSeries(comps []*Computer, input int64, phases ...int) int64 {
 	nextComp := func(idx int) (int, *Computer) {
 		if idx >= len(comps)-1 {
 			return -1, nil
@@ -307,7 +307,7 @@ func RunSeries(comps []*Computer, input int, phases ...int) int {
 	return runSeries(comps, nextComp, input, phases...)
 }
 
-func RunSeriesLoop(comps []*Computer, input int, phases ...int) int {
+func RunSeriesLoop(comps []*Computer, input int64, phases ...int) int64 {
 	nextComp := func(idx int) (int, *Computer) {
 		if idx >= len(comps)-1 {
 			return 0, comps[0]
@@ -317,11 +317,11 @@ func RunSeriesLoop(comps []*Computer, input int, phases ...int) int {
 	return runSeries(comps, nextComp, input, phases...)
 }
 
-func RunProgram(program []int, input <-chan int, o chan<- int) error {
-	i := 0
+func RunProgram(program *memory, input <-chan int64, o chan<- int64) error {
+	var i int64
 
 	for {
-		oc := parseOpcode(program[i])
+		oc := parseOpcode(program.Get(i))
 
 		switch oc.opcode {
 		case 99:
@@ -349,6 +349,6 @@ func RunProgram(program []int, input <-chan int, o chan<- int) error {
 			return fmt.Errorf("failed at i=%d, opcode=%+v", i, oc)
 		}
 
-		i += len(oc.modes) + 1
+		i += int64(len(oc.modes) + 1)
 	}
 }

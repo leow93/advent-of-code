@@ -9,51 +9,54 @@ import (
 	"github.com/leow93/advent-of-code/utils"
 )
 
-func parse(lines []string) []int {
+func parse(lines []string) []int64 {
 	// just need first line
 	line := lines[0]
 	parts := strings.Split(line, ",")
-	result := make([]int, len(parts))
+	result := make([]int64, len(parts))
 
 	for i, p := range parts {
 		x, err := strconv.Atoi(p)
 		if err != nil {
 			panic(err)
 		}
-		result[i] = x
+		result[i] = int64(x)
 	}
 	return result
 }
 
-func partOne(program []int) int {
-	p := make([]int, len(program))
+func partOne(program []int64) int64 {
+	p := make([]int64, len(program))
 	copy(p, program)
 
 	p[1] = 12
 	p[2] = 2
 
-	err := intcode.RunProgram(p, nil, nil)
+	mem := intcode.NewMemory(p)
+
+	err := intcode.RunProgram(mem, nil, nil)
 	if err != nil {
 		panic(err)
 	}
-	return p[0]
+	return mem.Get(0)
 }
 
-func partTwo(program []int) int {
-	target := 19690720
+func partTwo(program []int64) int64 {
+	var target int64 = 19690720
 
 	for i := range 100 {
 		for j := range 100 {
-			p := make([]int, len(program))
+			p := make([]int64, len(program))
 			copy(p, program)
-			p[1] = i
-			p[2] = j
-			err := intcode.RunProgram(p, nil, nil)
+			p[1] = int64(i)
+			p[2] = int64(j)
+			mem := intcode.NewMemory(p)
+			err := intcode.RunProgram(mem, nil, nil)
 			if err != nil {
 				panic(err)
 			}
-			if p[0] == target {
-				return (100 * i) + j
+			if mem.Get(0) == target {
+				return int64((100 * i) + j)
 			}
 		}
 	}
