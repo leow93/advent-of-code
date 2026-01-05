@@ -123,11 +123,8 @@ func directionToArrow(d direction) rune {
 	}
 }
 
-func printGrid(p *panels, robot *robot, debug bool) {
-	if debug {
-		return
-	}
-	size := 20
+func printGrid(p *panels, robot *robot) {
+	size := 80
 
 	rows := make([][]rune, size)
 	for i := range rows {
@@ -159,7 +156,7 @@ func printGrid(p *panels, robot *robot, debug bool) {
 	}
 }
 
-func partOne(p []int64) int {
+func runProgram(p []int64, robot *robot, panels *panels, start point, startColour int) {
 	inReady := make(chan struct{})
 	in := make(chan int64)
 	out := make(chan int64)
@@ -167,13 +164,8 @@ func partOne(p []int64) int {
 	executionDone := make(chan struct{})
 	outputDone := make(chan struct{})
 
-	robot := &robot{
-		d:   up,
-		pos: &point{0, 0},
-		mx:  sync.Mutex{},
-	}
-	panels := &panels{make(map[point]int), sync.Mutex{}}
-	panels.add(point{0, 0}, 0)
+	panels.add(start, startColour)
+
 	go func() {
 		defer func() {
 			close(in)
@@ -224,12 +216,46 @@ func partOne(p []int64) int {
 
 	<-executionDone
 	<-outputDone
+}
 
-	return panels.len()
+func partOne(p []int64) *panels {
+	robot := &robot{
+		d:   up,
+		pos: &point{0, 0},
+		mx:  sync.Mutex{},
+	}
+	panels := &panels{make(map[point]int), sync.Mutex{}}
+
+	runProgram(p, robot, panels, point{0, 0}, 0)
+	return panels
+}
+
+func partTwo(p []int64, origPanels *panels) {
+	var start *point
+	for k := range origPanels.data {
+		start = &k
+		break
+	}
+	if start == nil {
+		panic("expected start not to be nil")
+	}
+
+	robot := &robot{
+		d:   up,
+		pos: &point{start.x, start.y},
+		mx:  sync.Mutex{},
+	}
+	ps := &panels{make(map[point]int), sync.Mutex{}}
+	runProgram(p, robot, ps, *start, 1)
+
+	printGrid(ps, robot)
 }
 
 func main() {
 	lines := utils.ReadLines()
 	p := parse(lines)
-	fmt.Println("Part I", partOne(p))
+	panels := partOne(p)
+	fmt.Println("Part I", panels.len())
+	fmt.Println("Part II:")
+	partTwo(p, panels)
 }
