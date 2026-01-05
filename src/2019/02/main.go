@@ -34,7 +34,7 @@ func partOne(program []int64) int64 {
 
 	mem := intcode.NewMemory(p)
 
-	err := intcode.RunProgram(mem, nil, nil)
+	err := intcode.RunProgram(mem, nil, nil, nil)
 	if err != nil {
 		panic(err)
 	}
@@ -51,7 +51,7 @@ func partTwo(program []int64) int64 {
 			p[1] = int64(i)
 			p[2] = int64(j)
 			mem := intcode.NewMemory(p)
-			err := intcode.RunProgram(mem, nil, nil)
+			err := intcode.RunProgram(mem, nil, nil, nil)
 			if err != nil {
 				panic(err)
 			}

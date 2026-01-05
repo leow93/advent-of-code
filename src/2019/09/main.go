@@ -27,12 +27,14 @@ func parse(lines []string) []int64 {
 
 func run(p []int64, input int64) int64 {
 	var result int64
+	inReady := make(chan struct{})
 	in := make(chan int64)
 	out := make(chan int64)
 	done := make(chan struct{})
 	mem := intcode.NewMemory(p)
 
 	go func() {
+		<-inReady
 		in <- input
 	}()
 
@@ -41,7 +43,7 @@ func run(p []int64, input int64) int64 {
 			close(out)
 			done <- struct{}{}
 		}()
-		err := intcode.RunProgram(mem, in, out)
+		err := intcode.RunProgram(mem, inReady, in, out)
 		if err != nil {
 			panic(err)
 		}

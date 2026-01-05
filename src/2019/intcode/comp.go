@@ -169,19 +169,20 @@ func parseOpcode(code int64) opcode {
 }
 
 type Computer struct {
-	memory       *memory
-	input        chan int64
-	output       chan int64
-	closed       bool
-	relativeBase int64
-	mx           sync.RWMutex
+	memory        *memory
+	readyForInput chan struct{}
+	input         chan int64
+	output        chan int64
+	closed        bool
+	relativeBase  int64
+	mx            sync.RWMutex
 }
 
-func New(program []int64, input chan int64, output chan int64) *Computer {
+func New(program []int64, readyForInput chan struct{}, input chan int64, output chan int64) *Computer {
 	p := make([]int64, len(program))
 	copy(p, program)
 	relativeBase := int64(0)
-	return &Computer{NewMemory(p), input, output, false, relativeBase, sync.RWMutex{}}
+	return &Computer{NewMemory(p), readyForInput, input, output, false, relativeBase, sync.RWMutex{}}
 }
 
 func (c *Computer) stop() {
@@ -212,7 +213,7 @@ func (c *Computer) executeProgram() error {
 	defer func() {
 		c.sendInput(shutdownMsg())
 	}()
-	return RunProgram(c.memory, c.input, c.output)
+	return RunProgram(c.memory, c.readyForInput, c.input, c.output)
 }
 
 func (c *Computer) sendInput(msg inputMsg) {
@@ -224,6 +225,7 @@ func (c *Computer) sendInput(msg inputMsg) {
 
 	switch msg.msgType {
 	case "instruction":
+		<-c.readyForInput
 		c.input <- msg.data
 		return
 	case "shutdown":
@@ -238,7 +240,7 @@ func NewSeries(program []int64, n int) []*Computer {
 	}
 	comps := make([]*Computer, n)
 	for i := range n {
-		comps[i] = New(program, make(chan int64), make(chan int64))
+		comps[i] = New(program, make(chan struct{}), make(chan int64), make(chan int64))
 	}
 	return comps
 }
@@ -343,7 +345,7 @@ func RunSeriesLoop(comps []*Computer, input int64, phases ...int) int64 {
 	return runSeries(comps, nextComp, input, phases...)
 }
 
-func RunProgram(program *memory, input <-chan int64, o chan<- int64) error {
+func RunProgram(program *memory, readyForInput chan<- struct{}, input <-chan int64, o chan<- int64) error {
 	var i int64
 
 	for {
@@ -357,6 +359,7 @@ func RunProgram(program *memory, input <-chan int64, o chan<- int64) error {
 		case 2:
 			mul(program, i, oc.modes)
 		case 3:
+			readyForInput <- struct{}{}
 			i = saveFromInput(program, i, input, oc.modes)
 			continue
 		case 4:

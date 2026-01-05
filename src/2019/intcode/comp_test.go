@@ -8,7 +8,7 @@ import (
 func TestIntCode(t *testing.T) {
 	t.Run("Day 2: add and multiply, position mode", func(t *testing.T) {
 		p := NewMemory([]int64{1, 9, 10, 3, 2, 3, 11, 0, 99, 30, 40, 50})
-		err := RunProgram(p, nil, nil)
+		err := RunProgram(p, nil, nil, nil)
 		if err != nil {
 			t.Error("expected nil, got err", err)
 		}
@@ -19,7 +19,7 @@ func TestIntCode(t *testing.T) {
 
 	t.Run("Day 5", func(t *testing.T) {
 		p := NewMemory([]int64{1101, 100, -1, 4, 0})
-		err := RunProgram(p, nil, nil)
+		err := RunProgram(p, nil, nil, nil)
 		if err != nil {
 			t.Error("expected nil, got err", err)
 		}
@@ -93,12 +93,14 @@ func TestIntCode(t *testing.T) {
 		for _, tt := range ts {
 			t.Run(fmt.Sprintf("%+v", tt.input), func(t *testing.T) {
 				var result int64
+				readyForInput := make(chan struct{})
 				in := make(chan int64)
 				out := make(chan int64)
 				done := make(chan struct{})
 				mem := NewMemory(tt.input)
 
 				go func() {
+					<-readyForInput
 					in <- tt.inputSend
 				}()
 
@@ -107,7 +109,7 @@ func TestIntCode(t *testing.T) {
 						close(out)
 						done <- struct{}{}
 					}()
-					err := RunProgram(mem, in, out)
+					err := RunProgram(mem, readyForInput, in, out)
 					if err != nil {
 						panic(err)
 					}
