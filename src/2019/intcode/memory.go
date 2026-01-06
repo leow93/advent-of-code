@@ -4,14 +4,14 @@ import (
 	"sync"
 )
 
-type memory struct {
+type Memory struct {
 	mx     sync.RWMutex
 	data   map[int64]int64
 	maxKey int64
 	base   int64
 }
 
-func NewMemory(program []int64) *memory {
+func NewMemory(program []int64) *Memory {
 	data := make(map[int64]int64)
 	maxKey := int64(0)
 	for i, x := range program {
@@ -20,7 +20,7 @@ func NewMemory(program []int64) *memory {
 			maxKey = int64(i)
 		}
 	}
-	return &memory{
+	return &Memory{
 		mx:     sync.RWMutex{},
 		data:   data,
 		maxKey: maxKey,
@@ -28,14 +28,14 @@ func NewMemory(program []int64) *memory {
 	}
 }
 
-func (m *memory) Get(i int64) int64 {
+func (m *Memory) Get(i int64) int64 {
 	m.mx.RLock()
 	defer m.mx.RUnlock()
 	x, _ := m.data[i]
 	return x
 }
 
-func (m *memory) Set(i int64, x int64) {
+func (m *Memory) Set(i int64, x int64) {
 	m.mx.Lock()
 	defer m.mx.Unlock()
 	m.data[i] = x
@@ -44,19 +44,19 @@ func (m *memory) Set(i int64, x int64) {
 	}
 }
 
-func (m *memory) SetBase(x int64) {
+func (m *Memory) SetBase(x int64) {
 	m.mx.Lock()
 	defer m.mx.Unlock()
 	m.base = x
 }
 
-func (m *memory) GetBase() int64 {
+func (m *Memory) GetBase() int64 {
 	m.mx.RLock()
 	defer m.mx.RUnlock()
 	return m.base
 }
 
-func (m *memory) MaxKey() int64 {
+func (m *Memory) MaxKey() int64 {
 	m.mx.RLock()
 	defer m.mx.RUnlock()
 	return m.maxKey

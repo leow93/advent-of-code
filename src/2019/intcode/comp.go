@@ -13,7 +13,7 @@ const (
 	relative
 )
 
-func getValue(p *memory, i int64, m mode) int64 {
+func getValue(p *Memory, i int64, m mode) int64 {
 	switch m {
 	case immediate:
 		return p.Get(i)
@@ -26,7 +26,7 @@ func getValue(p *memory, i int64, m mode) int64 {
 	}
 }
 
-func getWriteIndex(p *memory, i int64, m mode) int64 {
+func getWriteIndex(p *Memory, i int64, m mode) int64 {
 	switch m {
 	case relative:
 		return p.Get(i) + p.GetBase()
@@ -37,7 +37,7 @@ func getWriteIndex(p *memory, i int64, m mode) int64 {
 	}
 }
 
-func add(p *memory, i int64, m []mode) {
+func add(p *Memory, i int64, m []mode) {
 	aMode := m[0]
 	a := getValue(p, i+1, aMode)
 	bMode := m[1]
@@ -47,7 +47,7 @@ func add(p *memory, i int64, m []mode) {
 	p.Set(idx, a+b)
 }
 
-func mul(p *memory, i int64, m []mode) {
+func mul(p *Memory, i int64, m []mode) {
 	aMode := m[0]
 	a := getValue(p, i+1, aMode)
 	bMode := m[1]
@@ -57,7 +57,7 @@ func mul(p *memory, i int64, m []mode) {
 	p.Set(idx, a*b)
 }
 
-func jit(p *memory, i int64, m []mode) int64 {
+func jit(p *Memory, i int64, m []mode) int64 {
 	aMode := m[0]
 	a := getValue(p, i+1, aMode)
 	if a == 0 {
@@ -68,7 +68,7 @@ func jit(p *memory, i int64, m []mode) int64 {
 	return b
 }
 
-func jif(p *memory, i int64, m []mode) int64 {
+func jif(p *Memory, i int64, m []mode) int64 {
 	aMode := m[0]
 	a := getValue(p, i+1, aMode)
 	if a != 0 {
@@ -79,7 +79,7 @@ func jif(p *memory, i int64, m []mode) int64 {
 	return b
 }
 
-func lt(p *memory, i int64, m []mode) {
+func lt(p *Memory, i int64, m []mode) {
 	aMode := m[0]
 	a := getValue(p, i+1, aMode)
 	bMode := m[1]
@@ -92,7 +92,7 @@ func lt(p *memory, i int64, m []mode) {
 	}
 }
 
-func eq(p *memory, i int64, m []mode) {
+func eq(p *Memory, i int64, m []mode) {
 	a := getValue(p, i+1, m[0])
 	b := getValue(p, i+2, m[1])
 	idx := getWriteIndex(p, i+3, m[2])
@@ -104,21 +104,21 @@ func eq(p *memory, i int64, m []mode) {
 	}
 }
 
-func setBase(p *memory, i int64, m []mode) int64 {
+func setBase(p *Memory, i int64, m []mode) int64 {
 	a := getValue(p, i+1, m[0])
 	base := p.GetBase()
 	p.SetBase(base + a)
 	return i + 2
 }
 
-func saveFromInput(p *memory, i int64, input <-chan int64, modes []mode) int64 {
+func saveFromInput(p *Memory, i int64, input <-chan int64, modes []mode) int64 {
 	x := <-input
 	idx := getWriteIndex(p, i+1, modes[0])
 	p.Set(idx, x)
 	return i + 2
 }
 
-func output(p *memory, i int64, m []mode, o chan<- int64) {
+func output(p *Memory, i int64, m []mode, o chan<- int64) {
 	o <- getValue(p, i+1, m[0])
 }
 
@@ -169,7 +169,7 @@ func parseOpcode(code int64) opcode {
 }
 
 type Computer struct {
-	memory        *memory
+	memory        *Memory
 	readyForInput chan struct{}
 	input         chan int64
 	output        chan int64
@@ -345,7 +345,7 @@ func RunSeriesLoop(comps []*Computer, input int64, phases ...int) int64 {
 	return runSeries(comps, nextComp, input, phases...)
 }
 
-func RunProgram(program *memory, readyForInput chan<- struct{}, input <-chan int64, o chan<- int64) error {
+func RunProgram(program *Memory, readyForInput chan<- struct{}, input <-chan int64, o chan<- int64) error {
 	var i int64
 
 	for {
