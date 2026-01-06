@@ -187,7 +187,7 @@ func readMoves() []int {
 	return moves
 }
 
-func Run(p []int64) {
+func Run(p []int64) int {
 	p[0] = 2
 	tty, err := os.Open("/dev/tty")
 	if err != nil {
@@ -262,4 +262,6 @@ func Run(p []int64) {
 	os.WriteFile("moves.json", bs, 0644)
 	// render one last time
 	render(state)
+
+	return state.score
 }
