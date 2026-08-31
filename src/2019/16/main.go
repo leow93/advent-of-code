@@ -6,6 +6,42 @@ import (
 	"github.com/leow93/advent-of-code/utils"
 )
 
+type data struct {
+	input     []int
+	overrides map[int]int
+}
+
+func newData(input []int) *data {
+	return &data{
+		input:     input,
+		overrides: make(map[int]int),
+	}
+}
+
+func (d *data) Clone() *data {
+	input := make([]int, len(d.input))
+	copy(input, d.input)
+
+	result := newData(input)
+
+	for i := range d.input {
+		result.Set(i, d.Get(i))
+	}
+	return result
+}
+
+func (d *data) Get(idx int) int {
+	if x, ok := d.overrides[idx]; ok {
+		return x
+	}
+
+	return d.input[idx]
+}
+
+func (d *data) Set(idx int, value int) {
+	d.overrides[idx] = value
+}
+
 func parse(lines []string) []int {
 	line := lines[0]
 	result := make([]int, len(line))
@@ -37,29 +73,37 @@ func ones(x int) int {
 	return abs(x % 10)
 }
 
-func fft(input []int, phases int) []int {
-	data := make([]int, len(input))
-	copy(data, input)
-
-	for range phases {
-		curr := make([]int, len(data))
-		copy(curr, data)
-
-		for i := range data {
+func fft(data *data, phases int) {
+	debug := true
+	curr := data
+	for p := range phases {
+		if debug {
+			fmt.Printf("After %d phases\n", p)
+		}
+		str := ""
+		for i := range data.input {
 			total := 0
 
-			for j, x := range data {
+			for j := range data.input {
+				fmt.Println(i, j)
 				rpe := resolvePatternElm(i+1, j)
-				y := x * rpe
+				y := data.Get(j) * rpe
+				str += fmt.Sprintf("%d*%d ", data.Get(j), rpe)
+				if j < len(data.input)-1 {
+					str += " + "
+				}
 				total += y
 			}
-
-			curr[i] = ones(total)
+			str += fmt.Sprintf(" = %d\n", ones(total))
+			curr.Set(i, ones(total))
 		}
 
-		data = curr
+		if debug {
+			fmt.Print(str)
+		}
+
+		*data = *curr
 	}
-	return data
 }
 
 func join(xs []int) string {
@@ -71,7 +115,14 @@ func join(xs []int) string {
 }
 
 func partOne(input []int) string {
-	return join(fft(input, 100)[0:8])
+	data := newData(input)
+	fft(data, 100)
+	result := ""
+	for i := range data.input[0:8] {
+		result += fmt.Sprintf("%d", data.Get(i))
+	}
+
+	return result
 }
 
 func main() {
